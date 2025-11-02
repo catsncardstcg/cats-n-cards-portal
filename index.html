@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cats N Cards TCG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.6s;
+        }
+
+        .logo {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        .logo h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .menu-buttons {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            animation: fadeInUp 0.6s;
+        }
+
+        .menu-button {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+
+        .menu-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .menu-button.points {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .menu-button.live {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+
+        .menu-button.delivery {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .button-icon {
+            font-size: 3em;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .button-content {
+            flex: 1;
+        }
+
+        .button-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .button-subtitle {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+
+        .button-arrow {
+            font-size: 2em;
+            opacity: 0.7;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: white;
+            opacity: 0.8;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 600px) {
+            .logo h1 {
+                font-size: 2em;
+            }
+
+            .button-title {
+                font-size: 1.3em;
+            }
+
+            .menu-button {
+                padding: 25px 20px;
+            }
+
+            .button-icon {
+                font-size: 2.5em;
+                min-width: 50px;
+            }
+        }
+
+        /* Pulse animation for live button */
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .menu-button.live {
+            animation: pulse 2s infinite;
+        }
+
+        .menu-button.live:hover {
+            animation: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <h1>🐱 Cats N Cards TCG</h1>
+                <p>Your Pokemon Cards Partner</p>
+            </div>
+        </div>
+
+        <div class="menu-buttons">
+            <a href="points.html" class="menu-button points">
+                <div class="button-icon">⭐</div>
+                <div class="button-content">
+                    <div class="button-title">สะสมแต้ม</div>
+                    <div class="button-subtitle">POINTS - Check your points & rewards</div>
+                </div>
+                <div class="button-arrow">→</div>
+            </a>
+
+            <a href="live.html" class="menu-button live">
+                <div class="button-icon">📺</div>
+                <div class="button-content">
+                    <div class="button-title">ดูไลฟ์</div>
+                    <div class="button-subtitle">LIVE - Watch our livestream</div>
+                </div>
+                <div class="button-arrow">→</div>
+            </a>
+
+            <a href="delivery.html" class="menu-button delivery">
+                <div class="button-icon">📦</div>
+                <div class="button-content">
+                    <div class="button-title">ส่งของ</div>
+                    <div class="button-subtitle">DELIVERY - Request delivery</div>
+                </div>
+                <div class="button-arrow">→</div>
+            </a>
+        </div>
+
+        <div class="footer">
+            <p>© 2024 Cats N Cards TCG</p>
+            <p>Follow us on TikTok: @cats.n.cards.live</p>
+        </div>
+    </div>
+</body>
+</html>

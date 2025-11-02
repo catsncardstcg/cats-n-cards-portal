@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Portal - Cats N Cards TCG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .back-button {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .back-button:hover {
+            opacity: 1;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-button {
+            flex: 1;
+            min-width: 200px;
+            padding: 15px 20px;
+            background: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .tab-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .tab-button.active {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert.show {
+            display: block;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .info-box p {
+            color: #1565c0;
+            margin: 0;
+        }
+
+        .file-upload {
+            margin-top: 10px;
+        }
+
+        .file-upload label {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-upload label:hover {
+            background: #5568d3;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 10px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .qr-section {
+            text-align: center;
+            margin: 30px 0;
+            display: none;
+        }
+
+        .qr-section.show {
+            display: block;
+        }
+
+        .qr-section img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .qr-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .qr-section p {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+
+        .tracking-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .tracking-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .tracking-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .tracking-table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .tab-button {
+                min-width: 100%;
+            }
+            
+            .tab-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-button">← Back to Home</a>
+
+        <div class="header">
+            <h1>📦 Delivery Portal</h1>
+            <p>พอร์ทัลจัดส่งสินค้า</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('register')">
+                📝 Register<br>ลงทะเบียน
+            </button>
+            <button class="tab-button" onclick="switchTab('request-delivery')">
+                🚚 Request Delivery<br>ขอจัดส่ง
+            </button>
+            <button class="tab-button" onclick="switchTab('view-tracking')">
+                🔍 View Tracking<br>ดูเลขพัสดุ
+            </button>
+        </div>
+
+        <!-- Register Tab -->
+        <div id="register" class="tab-content active">
+            <h2 style="margin-bottom: 20px;">ลงทะเบียนที่อยู่จัดส่ง</h2>
+            <div class="info-box">
+                <p>💡 กรอกข้อมูลและอัปโหลด screenshot โปรไฟล์ TikTok ของคุณเพื่อยืนยันตัวตน (ครั้งแรกเท่านั้น)</p>
+            </div>
+            
+            <div id="register-alert" class="alert"></div>
+            
+            <form id="registerForm" onsubmit="registerAddress(event)">
+                <div class="form-group">
+                    <label for="tiktok-username">TikTok Username *</label>
+                    <input type="text" id="tiktok-username" placeholder="@yourusername" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="full-name">Full Name / ชื่อ-นามสกุล *</label>
+                    <input type="text" id="full-name" placeholder="ชื่อ นามสกุล" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number / เบอร์โทรศัพท์ *</label>
+                    <input type="tel" id="phone" placeholder="08XXXXXXXX" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="address">Delivery Address / ที่อยู่จัดส่ง *</label>
+                    <textarea id="address" placeholder="บ้านเลขที่ หมู่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Delivery Notes / หมายเหตุ (Optional)</label>
+                    <textarea id="notes" placeholder="เช่น บ้านติดวัด ตึกสีฟ้า ฯลฯ"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>TikTok Profile Screenshot / ภาพ Screenshot โปรไฟล์ TikTok *</label>
+                    <div class="info-box" style="margin-top: 10px;">
+                        <p>📸 กรุณาถ่าย screenshot โปรไฟล์ TikTok ของคุณที่แสดง username ชัดเจน</p>
+                    </div>
+                    <div class="file-upload">
+                        <label for="profile-screenshot">
+                            📸 Upload Screenshot
+                        </label>
+                        <input type="file" id="profile-screenshot" accept="image/*" onchange="handleScreenshotSelect(event)" required>
+                        <div class="file-name" id="screenshot-name"></div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn" id="register-btn">📝 Register / ลงทะเบียน</button>
+            </form>
+        </div>
+
+        <!-- Request Delivery Tab -->
+        <div id="request-delivery" class="tab-content">
+            <h2 style="margin-bottom: 20px;">ขอจัดส่งสินค้า</h2>
+            <div class="info-box">
+                <p>💡 โอนค่าจัดส่ง 50 บาท แล้วอัปโหลดสลิป เราจะจัดส่งสินค้าให้คุณเร็วที่สุด</p>
+            </div>
+            
+            <div id="delivery-alert" class="alert"></div>
+            
+            <form id="deliveryForm" onsubmit="requestDelivery(event)">
+                <div class="form-group">
+                    <label for="delivery-tiktok">TikTok Username *</label>
+                    <input type="text" id="delivery-tiktok" placeholder="@yourusername" required>
+                </div>
+
+                <button type="button" class="btn" onclick="showQRCode()">
+                    ➡️ Continue to Payment / ดำเนินการชำระเงิน
+                </button>
+            </form>
+
+            <div id="qr-section" class="qr-section">
+                <h3>💰 Scan to Pay / สแกนเพื่อชำระเงิน</h3>
+                <p><strong>Delivery Fee: 50 THB / ค่าจัดส่ง: 50 บาท</strong></p>
+                <img src="qr.png" alt="PromptPay QR Code">
+                
+                <div class="file-upload">
+                    <label for="receipt-upload">
+                        📸 Upload Payment Receipt / อัปโหลดหลักฐานการโอน
+                    </label>
+                    <input type="file" id="receipt-upload" accept="image/*" onchange="handleReceiptSelect(event)">
+                    <div class="file-name" id="receipt-name"></div>
+                </div>
+
+                <button type="button" class="btn" onclick="submitDeliveryRequest()" id="submit-delivery-btn" disabled style="margin-top: 20px;">
+                    ✅ Submit Request / ส่งคำขอจัดส่ง
+                </button>
+            </div>
+        </div>
+
+        <!-- View Tracking Tab -->
+        <div id="view-tracking" class="tab-content">
+            <h2 style="margin-bottom: 20px;">เลขพัสดุทั้งหมด</h2>
+            <div class="info-box">
+                <p>💡 รายการเลขพัสดุทั้งหมด คุณสามารถค้นหาชื่อของคุณเพื่อดูเลขพัสดุ</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="search-tracking">🔍 Search by Name / ค้นหาด้วยชื่อ</label>
+                <input type="text" id="search-tracking" placeholder="ชื่อลูกค้า" oninput="filterTracking()">
+            </div>
+
+            <div id="tracking-loading" class="loading">
+                <div class="spinner"></div>
+                <p>Loading tracking numbers...</p>
+            </div>
+
+            <div id="tracking-content" style="display: none;">
+                <table class="tracking-table" id="tracking-table">
+                    <thead>
+                        <tr>
+                            <th>วันที่ส่ง</th>
+                            <th>ชื่อลูกค้า</th>
+                            <th>เลขพัสดุ</th>
+                            <th>ขนส่ง</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tracking-tbody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="tracking-empty" class="empty-state" style="display: none;">
+                <p style="font-size: 3em;">📦</p>
+                <p>No tracking numbers yet / ยังไม่มีเลขพัสดุ</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - UPDATE THIS with your Google Apps Script URL
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxPRxu5cG9iOVLEaHFk6dh4qrNUIeT9MHWmaeRTAwuOBzZxi_idVEej6r_ehsN3NqkKVA/exec';
+        
+        let trackingData = [];
+        let selectedScreenshot = null;
+        let selectedReceipt = null;
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabName === 'view-tracking') {
+                loadTrackingData();
+            }
+        }
+
+        // Show alert message
+        function showAlert(elementId, message, type) {
+            const alert = document.getElementById(elementId);
+            alert.textContent = message;
+            alert.className = `alert ${type} show`;
+            
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 5000);
+        }
+
+        // Handle screenshot selection
+        function handleScreenshotSelect(event) {
+            selectedScreenshot = event.target.files[0];
+            
+            if (selectedScreenshot) {
+                document.getElementById('screenshot-name').textContent = `Selected: ${selectedScreenshot.name}`;
+            }
+        }
+
+        // Register Address with Screenshot
+        async function registerAddress(event) {
+            event.preventDefault();
+            
+            if (!selectedScreenshot) {
+                showAlert('register-alert', '❌ Please upload TikTok profile screenshot / กรุณาอัปโหลด screenshot โปรไฟล์', 'error');
+                return;
+            }
+
+            const button = document.getElementById('register-btn');
+            button.disabled = true;
+            button.textContent = 'Uploading... / กำลังส่ง...';
+
+            // Convert screenshot to base64
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64 = e.target.result.split(',')[1];
+                
+                const data = {
+                    action: 'registerAddress',
+                    tiktokUsername: document.getElementById('tiktok-username').value,
+                    fullName: document.getElementById('full-name').value,
+                    phone: document.getElementById('phone').value,
+                    address: document.getElementById('address').value,
+                    notes: document.getElementById('notes').value,
+                    screenshotFileName: selectedScreenshot.name,
+                    screenshotData: base64,
+                    screenshotMimeType: selectedScreenshot.type
+                };
+
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showAlert('register-alert', '✅ Registration submitted! We will verify and approve within 24 hours. / ส่งคำขอสำเร็จ! เราจะตรวจสอบภายใน 24 ชั่วโมง', 'success');
+                        event.target.reset();
+                        selectedScreenshot = null;
+                        document.getElementById('screenshot-name').textContent = '';
+                    } else {
+                        showAlert('register-alert', '❌ Error: ' + result.message, 'error');
+                    }
+                } catch (error) {
+                    showAlert('register-alert', '❌ Connection error. Please try again. / เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
+                }
+
+                button.disabled = false;
+                button.textContent = '📝 Register / ลงทะเบียน';
+            };
+
+            reader.readAsDataURL(selectedScreenshot);
+        }
+
+        // Show QR Code for payment
+        async function showQRCode() {
+            const tiktok = document.getElementById('delivery-tiktok').value.trim();
+            
+            if (!tiktok) {
+                showAlert('delivery-alert', '❌ Please enter your TikTok username / กรุณากรอก TikTok Username', 'error');
+                return;
+            }
+
+            // Check if user is approved
+            try {
+                const response = await fetch(SCRIPT_URL + '?action=checkApproval&username=' + encodeURIComponent(tiktok));
+                const result = await response.json();
+
+                if (!result.success) {
+                    showAlert('delivery-alert', '❌ Error checking registration / เกิดข้อผิดพลาดในการตรวจสอบ', 'error');
+                    return;
+                }
+
+                if (result.status === 'not_registered') {
+                    showAlert('delivery-alert', '❌ Please register first in the Register tab / กรุณาลงทะเบียนก่อนในแท็บลงทะเบียน', 'error');
+                    return;
+                }
+
+                if (result.status === 'pending') {
+                    showAlert('delivery-alert', '⏳ Your registration is pending approval. Please wait for verification. / คำขอของคุณกำลังรอการอนุมัติ กรุณารอการตรวจสอบ', 'error');
+                    return;
+                }
+
+                if (result.status === 'rejected') {
+                    showAlert('delivery-alert', '❌ Your registration was rejected. Please contact us. / คำขอของคุณถูกปฏิเสธ กรุณาติดต่อเรา', 'error');
+                    return;
+                }
+
+                if (result.status === 'approved') {
+                    document.getElementById('qr-section').classList.add('show');
+                    document.getElementById('deliveryForm').style.display = 'none';
+                }
+
+            } catch (error) {
+                showAlert('delivery-alert', '❌ Connection error. Please try again. / เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
+            }
+        }
+
+        // Handle receipt selection
+        function handleReceiptSelect(event) {
+            selectedReceipt = event.target.files[0];
+            
+            if (selectedReceipt) {
+                document.getElementById('receipt-name').textContent = `Selected: ${selectedReceipt.name}`;
+                document.getElementById('submit-delivery-btn').disabled = false;
+            }
+        }
+
+        // Submit delivery request
+        async function submitDeliveryRequest() {
+            const tiktok = document.getElementById('delivery-tiktok').value.trim();
+            
+            if (!selectedReceipt) {
+                showAlert('delivery-alert', '❌ Please upload payment receipt / กรุณาอัปโหลดหลักฐานการโอน', 'error');
+                return;
+            }
+
+            const button = document.getElementById('submit-delivery-btn');
+            button.disabled = true;
+            button.textContent = 'Uploading... / กำลังส่ง...';
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64 = e.target.result.split(',')[1];
+                
+                const data = {
+                    action: 'requestDelivery',
+                    tiktokUsername: tiktok,
+                    receiptFileName: selectedReceipt.name,
+                    receiptData: base64,
+                    receiptMimeType: selectedReceipt.type
+                };
+
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showAlert('delivery-alert', '✅ Delivery request submitted! / ส่งคำขอจัดส่งสำเร็จ!', 'success');
+                        
+                        document.getElementById('delivery-tiktok').value = '';
+                        document.getElementById('receipt-upload').value = '';
+                        document.getElementById('receipt-name').textContent = '';
+                        document.getElementById('qr-section').classList.remove('show');
+                        document.getElementById('deliveryForm').style.display = 'block';
+                        selectedReceipt = null;
+                    } else {
+                        showAlert('delivery-alert', '❌ Error: ' + result.message, 'error');
+                    }
+                } catch (error) {
+                    showAlert('delivery-alert', '❌ Connection error. Please try again. / เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
+                }
+
+                button.disabled = false;
+                button.textContent = '✅ Submit Request / ส่งคำขอจัดส่ง';
+            };
+
+            reader.readAsDataURL(selectedReceipt);
+        }
+
+        // Load tracking data
+        async function loadTrackingData() {
+            document.getElementById('tracking-loading').style.display = 'block';
+            document.getElementById('tracking-content').style.display = 'none';
+            document.getElementById('tracking-empty').style.display = 'none';
+
+            try {
+                const response = await fetch(SCRIPT_URL + '?action=getTracking');
+                const result = await response.json();
+
+                document.getElementById('tracking-loading').style.display = 'none';
+
+                if (result.success && result.data && result.data.length > 0) {
+                    trackingData = result.data;
+                    displayTrackingData(trackingData);
+                    document.getElementById('tracking-content').style.display = 'block';
+                } else {
+                    document.getElementById('tracking-empty').style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('tracking-loading').style.display = 'none';
+                document.getElementById('tracking-empty').style.display = 'block';
+            }
+        }
+
+        // Display tracking data
+        function displayTrackingData(data) {
+            const tbody = document.getElementById('tracking-tbody');
+            tbody.innerHTML = '';
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.date || '-'}</td>
+                    <td>${row.customer || '-'}</td>
+                    <td><strong>${row.tracking || '-'}</strong></td>
+                    <td>${row.carrier || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Filter tracking data
+        function filterTracking() {
+            const searchTerm = document.getElementById('search-tracking').value.toLowerCase();
+            
+            if (!searchTerm) {
+                displayTrackingData(trackingData);
+                return;
+            }
+
+            const filtered = trackingData.filter(row => 
+                (row.customer || '').toLowerCase().includes(searchTerm)
+            );
+
+            displayTrackingData(filtered);
+        }
+    </script>
+</body>
+</html>

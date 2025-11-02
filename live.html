@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Stream - Cats N Cards TCG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .back-button {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            opacity: 0.9;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+
+        .back-button:hover {
+            opacity: 1;
+        }
+
+        .card {
+            background: white;
+            padding: 50px 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .live-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        h1 {
+            font-size: 2.5em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .live-badge {
+            display: inline-block;
+            background: #ff0000;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        p {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+
+        .tiktok-btn {
+            display: inline-block;
+            background: #000;
+            color: white;
+            text-decoration: none;
+            padding: 20px 50px;
+            border-radius: 50px;
+            font-size: 1.3em;
+            font-weight: 700;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .tiktok-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            background: #111;
+        }
+
+        .tiktok-username {
+            margin-top: 20px;
+            font-size: 1.1em;
+            color: #666;
+        }
+
+        .info-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-top: 30px;
+            border-radius: 4px;
+            text-align: left;
+        }
+
+        .info-box p {
+            color: #856404;
+            margin: 5px 0;
+            font-size: 1em;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .card {
+                padding: 40px 20px;
+            }
+
+            .tiktok-btn {
+                padding: 15px 40px;
+                font-size: 1.1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back to Home</a>
+
+    <div class="container">
+        <div class="card">
+            <div class="live-icon">📺</div>
+            <h1>Watch Our Livestream!</h1>
+            <div class="live-badge">🔴 LIVE</div>
+            <p>Join us on TikTok for exclusive deals on Pokemon cards!</p>
+
+            <a href="https://www.tiktok.com/@cats.n.cards.live" target="_blank" class="tiktok-btn">
+                🎵 Open TikTok
+            </a>
+
+            <div class="tiktok-username">
+                @cats.n.cards.live
+            </div>
+
+            <div class="info-box">
+                <p>💡 <strong>Tips:</strong></p>
+                <p>• Follow us to get notified when we go live</p>
+                <p>• Comment your TikTok username to link your purchases</p>
+                <p>• Exclusive livestream-only deals!</p>
+                <p>• Earn points on every purchase (250 THB = 1 point)</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Optional: Auto-redirect after 3 seconds
+        // Uncomment if you want automatic redirect
+        /*
+        setTimeout(function() {
+            window.location.href = 'https://www.tiktok.com/@cats.n.cards.live';
+        }, 3000);
+        */
+    </script>
+</body>
+</html>
