@@ -317,10 +317,139 @@
         <div class="header">
             <h1>⭐ Points System</h1>
             <p>ระบบสะสมแต้ม</p>
-            <h1>กำลังทำครับบบบบบบ</h1>
-
         </div>
 
+        <!-- Points Checker -->
+        <div class="card points-checker">
+            <h2>Check Your Points</h2>
+            <div class="info-box">
+                <p>💡 Earn 1 point for every 250 THB spent!</p>
+            </div>
+
+            <div id="checker-alert" class="alert"></div>
+
+            <form onsubmit="checkPoints(event)">
+                <div class="form-group">
+                    <label for="check-username">Enter Your TikTok Username</label>
+                    <input type="text" id="check-username" placeholder="@yourusername" required>
+                </div>
+
+                <button type="submit" class="btn" id="check-btn">🔍 Check Points</button>
+            </form>
+
+            <div id="points-display" class="points-display">
+                <h3>Your Points Balance</h3>
+                <div class="points-badge" id="points-amount">0</div>
+                <p style="color: #666;">Points</p>
+                <p style="margin-top: 20px; color: #666;">
+                    Lifetime Earned: <strong id="lifetime-points">0</strong> points
+                </p>
+            </div>
+        </div>
+
+        <!-- Rewards Catalog -->
+        <div class="card">
+            <h2>🎁 Rewards Catalog</h2>
+            <div class="info-box">
+                <p>💡 Redeem your points for amazing rewards! Higher tiers = better value!</p>
+            </div>
+
+            <div class="rewards-grid">
+                <div class="reward-card" data-points="3">
+                    <div class="reward-icon">🚚</div>
+                    <div class="reward-points">3 Points</div>
+                    <div class="reward-title">Free Delivery</div>
+                    <div class="reward-value">Worth 50 THB</div>
+                    <button class="redeem-btn" onclick="redeemReward(3, 'Free Delivery')">Redeem</button>
+                </div>
+
+                <div class="reward-card" data-points="5">
+                    <div class="reward-icon">🎴</div>
+                    <div class="reward-points">5 Points</div>
+                    <div class="reward-title">Promo Card Pack</div>
+                    <div class="reward-value">Worth 100 THB</div>
+                    <button class="redeem-btn" onclick="redeemReward(5, 'Promo Card Pack')">Redeem</button>
+                </div>
+
+                <div class="reward-card" data-points="10">
+                    <div class="reward-icon">💰</div>
+                    <div class="reward-points">10 Points</div>
+                    <div class="reward-title">50 THB Discount</div>
+                    <div class="reward-value">Cash discount</div>
+                    <button class="redeem-btn" onclick="redeemReward(10, '50 THB Discount')">Redeem</button>
+                </div>
+
+                <div class="reward-card" data-points="15">
+                    <div class="reward-icon">💵</div>
+                    <div class="reward-points">15 Points</div>
+                    <div class="reward-title">100 THB Discount</div>
+                    <div class="reward-value">Cash discount</div>
+                    <button class="redeem-btn" onclick="redeemReward(15, '100 THB Discount')">Redeem</button>
+                </div>
+
+                <div class="reward-card" data-points="20">
+                    <div class="reward-icon">💸</div>
+                    <div class="reward-points">20 Points</div>
+                    <div class="reward-title">150 THB Discount</div>
+                    <div class="reward-value">Cash discount</div>
+                    <button class="redeem-btn" onclick="redeemReward(20, '150 THB Discount')">Redeem</button>
+                </div>
+
+                <div class="reward-card" data-points="25">
+                    <div class="reward-icon">📦</div>
+                    <div class="reward-points">25 Points</div>
+                    <div class="reward-title">Booster Pack</div>
+                    <div class="reward-value">Worth 350 THB</div>
+                    <button class="redeem-btn" onclick="redeemReward(25, 'Booster Pack')">Redeem</button>
+                </div>
+
+                <div class="reward-card" data-points="30">
+                    <div class="reward-icon">💎</div>
+                    <div class="reward-points">30 Points</div>
+                    <div class="reward-title">250 THB Discount</div>
+                    <div class="reward-value">Cash discount</div>
+                    <button class="redeem-btn" onclick="redeemReward(30, '250 THB Discount')">Redeem</button>
+                </div>
+
+                <div class="reward-card" data-points="40">
+                    <div class="reward-icon">✨</div>
+                    <div class="reward-points">40 Points</div>
+                    <div class="reward-title">350 THB Discount</div>
+                    <div class="reward-value">OR Special Holo</div>
+                    <button class="redeem-btn" onclick="redeemReward(40, '350 THB Discount OR Special Holo')">Redeem</button>
+                </div>
+
+                <div class="reward-card" data-points="50">
+                    <div class="reward-icon">🌟</div>
+                    <div class="reward-points">50 Points</div>
+                    <div class="reward-title">VIP Reward</div>
+                    <div class="reward-value">500 THB + Exclusive Card</div>
+                    <button class="redeem-btn" onclick="redeemReward(50, '500 THB Discount + Exclusive Card')">Redeem</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Points History -->
+        <div class="card" id="history-section" style="display: none;">
+            <h2>📊 Points History</h2>
+            <div id="history-loading" class="loading">
+                <div class="spinner"></div>
+                <p>Loading history...</p>
+            </div>
+            <div id="history-content" style="display: none;">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Activity</th>
+                            <th>Points</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
