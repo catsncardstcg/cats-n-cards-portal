@@ -397,7 +397,7 @@
                 <div class="form-group">
                     <label>TikTok Profile Screenshot / ภาพ Screenshot โปรไฟล์ TikTok *</label>
                     <div class="info-box" style="margin-top: 10px;">
-                        <p>📸 กรุณาถ่าย screenshot โปรไฟล์ TikTok ของคุณที่แสดง username ชัดเจน</p>
+                        <p>📸 กรุณาถ่าย screenshot โปรไฟล์ TikTok ของคุณที่แสดง username ชัดเจน (เพื่อป้องกันคนสมรวยนะครับบ)</p>
                     </div>
                     <div class="file-upload">
                         <label for="profile-screenshot">
@@ -415,6 +415,21 @@
         <!-- Request Delivery Tab -->
         <div id="request-delivery" class="tab-content">
             <h2 style="margin-bottom: 20px;">ขอจัดส่งสินค้า</h2>
+            
+            <!-- Delivery Schedule -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <h3 style="margin-bottom: 15px; font-size: 1.3em;">📦 ตารางจัดส่ง</h3>
+                <p style="font-size: 1.1em; margin-bottom: 10px;">ส่งของทุกวัน: <strong>จันทร์ | พุธ | เสาร์</strong></p>
+                <p style="font-size: 1em; opacity: 0.95;">⏰ ตัดรอบเวลา 12.00 เที่ยงวัน ของวันนั้นๆ</p>
+            </div>
+
+            <!-- Current Delivery Round -->
+            <div id="delivery-round-info" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 4px; display: none;">
+                <p style="color: #856404; margin: 0; font-size: 1.1em;">
+                    <strong>🚚 รอบจัดส่งของคุณ:</strong> <span id="delivery-round-text"></span>
+                </p>
+            </div>
+            
             <div class="info-box">
                 <p>💡 โอนค่าจัดส่ง 50 บาท แล้วอัปโหลดสลิป เราจะจัดส่งสินค้าให้คุณเร็วที่สุด</p>
             </div>
@@ -492,11 +507,114 @@
 
     <script>
         // Configuration - UPDATE THIS with your Google Apps Script URL
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxPRxu5cG9iOVLEaHFk6dh4qrNUIeT9MHWmaeRTAwuOBzZxi_idVEej6r_ehsN3NqkKVA/exec';
+        const SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
         
         let trackingData = [];
         let selectedScreenshot = null;
         let selectedReceipt = null;
+
+        // Calculate next delivery round
+        function getNextDeliveryRound() {
+            const now = new Date();
+            const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+            const currentTime = hour + (minute / 60);
+            
+            // Delivery days: Monday (1), Wednesday (3), Saturday (6)
+            // Cutoff: 12:00 noon (12.0)
+            const CUTOFF_TIME = 12.0;
+            
+            const dayNames = {
+                1: 'วันจันทร์',
+                3: 'วันพุธ',
+                6: 'วันเสาร์'
+            };
+            
+            const dayNamesEng = {
+                1: 'Monday',
+                3: 'Wednesday',
+                6: 'Saturday'
+            };
+            
+            // Check if today is a delivery day
+            if ([1, 3, 6].includes(dayOfWeek)) {
+                if (currentTime < CUTOFF_TIME) {
+                    // Before cutoff - delivery today
+                    const hoursLeft = Math.floor(CUTOFF_TIME - currentTime);
+                    const minutesLeft = Math.floor((CUTOFF_TIME - currentTime - hoursLeft) * 60);
+                    return {
+                        day: dayNames[dayOfWeek],
+                        dayEng: dayNamesEng[dayOfWeek],
+                        isToday: true,
+                        timeLeft: `${hoursLeft} ชั่วโมง ${minutesLeft} นาที`,
+                        urgent: currentTime >= (CUTOFF_TIME - 2) // Less than 2 hours left
+                    };
+                }
+            }
+            
+            // Find next delivery day
+            let daysToAdd = 1;
+            let nextDay = (dayOfWeek + 1) % 7;
+            
+            while (![1, 3, 6].includes(nextDay) && daysToAdd < 7) {
+                daysToAdd++;
+                nextDay = (dayOfWeek + daysToAdd) % 7;
+            }
+            
+            const nextDate = new Date(now);
+            nextDate.setDate(now.getDate() + daysToAdd);
+            
+            const dateStr = nextDate.toLocaleDateString('th-TH', {
+                day: 'numeric',
+                month: 'long'
+            });
+            
+            return {
+                day: dayNames[nextDay],
+                dayEng: dayNamesEng[nextDay],
+                isToday: false,
+                date: dateStr,
+                daysToWait: daysToAdd
+            };
+        }
+
+        // Display delivery round info
+        function displayDeliveryRound() {
+            const roundInfo = getNextDeliveryRound();
+            const infoDiv = document.getElementById('delivery-round-info');
+            const textSpan = document.getElementById('delivery-round-text');
+            
+            if (roundInfo.isToday) {
+                if (roundInfo.urgent) {
+                    infoDiv.style.background = '#fff3cd';
+                    infoDiv.style.borderLeft = '4px solid #ff9800';
+                    textSpan.innerHTML = `<span style="color: #ff6b6b;">${roundInfo.day} (วันนี้!) ⚠️</span><br>
+                        <span style="font-size: 0.95em;">เหลือเวลา ${roundInfo.timeLeft} ก่อนตัดรอบ - โอนเงินเร็ว!</span>`;
+                } else {
+                    infoDiv.style.background = '#d4edda';
+                    infoDiv.style.borderLeft = '4px solid #28a745';
+                    textSpan.innerHTML = `<span style="color: #28a745;">${roundInfo.day} (วันนี้!) ✅</span><br>
+                        <span style="font-size: 0.95em;">เหลือเวลา ${roundInfo.timeLeft} ก่อนตัดรอบ</span>`;
+                }
+            } else {
+                infoDiv.style.background = '#e3f2fd';
+                infoDiv.style.borderLeft = '4px solid #2196F3';
+                if (roundInfo.daysToWait === 1) {
+                    textSpan.innerHTML = `<span style="color: #2196F3;">${roundInfo.day} (พรุ่งนี้) - ${roundInfo.date}</span>`;
+                } else {
+                    textSpan.innerHTML = `<span style="color: #2196F3;">${roundInfo.day} - ${roundInfo.date}</span><br>
+                        <span style="font-size: 0.95em;">(อีก ${roundInfo.daysToWait} วัน)</span>`;
+                }
+            }
+            
+            infoDiv.style.display = 'block';
+        }
+
+        // Show delivery round when tab is opened
+        window.addEventListener('DOMContentLoaded', function() {
+            displayDeliveryRound();
+        });
 
         // Tab switching
         function switchTab(tabName) {
@@ -513,6 +631,8 @@
 
             if (tabName === 'view-tracking') {
                 loadTrackingData();
+            } else if (tabName === 'request-delivery') {
+                displayDeliveryRound(); // Refresh delivery round info
             }
         }
 
