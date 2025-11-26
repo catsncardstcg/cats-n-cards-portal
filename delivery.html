@@ -327,14 +327,42 @@
             .header h1 {
                 font-size: 1.8em;
             }
-            
+
             .tab-button {
                 min-width: 100%;
             }
-            
+
             .tab-content {
                 padding: 20px;
             }
+        }
+
+        /* Upload Progress UI */
+        .upload-progress {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            margin: 0;
+            color: #666;
+            font-size: 0.9em;
         }
     </style>
 </head>
@@ -409,6 +437,14 @@
                         <input type="file" id="profile-screenshot" accept="image/*" onchange="handleScreenshotSelect(event)" required>
                         <div class="file-name" id="screenshot-name"></div>
                     </div>
+
+                    <!-- Upload Progress for Screenshot -->
+                    <div id="register-upload-progress" class="upload-progress" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="register-progress-fill"></div>
+                        </div>
+                        <p class="progress-text" id="register-progress-text">Preparing upload...</p>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn" id="register-btn">📝 Register / ลงทะเบียน</button>
@@ -461,6 +497,14 @@
                     </label>
                     <input type="file" id="receipt-upload" accept="image/*" onchange="handleReceiptSelect(event)">
                     <div class="file-name" id="receipt-name"></div>
+                </div>
+
+                <!-- Upload Progress for Delivery Receipt -->
+                <div id="delivery-upload-progress" class="upload-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="delivery-progress-fill"></div>
+                    </div>
+                    <p class="progress-text" id="delivery-progress-text">Preparing upload...</p>
                 </div>
 
                 <button type="button" class="btn" onclick="submitDeliveryRequest()" id="submit-delivery-btn" disabled style="margin-top: 20px;">
@@ -516,6 +560,12 @@
 
     <!-- User Mapping Module -->
     <script src="user-mapping.js"></script>
+
+    <!-- Image Compression Library -->
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+
+    <!-- Image Compression Utilities -->
+    <script src="image-compression-utils.js"></script>
 
     <script>
         // Configuration - UPDATE THIS with your Google Apps Script URL
@@ -661,11 +711,32 @@
         }
 
         // Handle screenshot selection
+        // Feature flag for compression (set to false to disable)
+        const ENABLE_IMAGE_COMPRESSION = true;
+
         function handleScreenshotSelect(event) {
             selectedScreenshot = event.target.files[0];
-            
+
             if (selectedScreenshot) {
-                document.getElementById('screenshot-name').textContent = `Selected: ${selectedScreenshot.name}`;
+                // Validate file if compression is enabled
+                if (ENABLE_IMAGE_COMPRESSION && typeof validateImageFile === 'function') {
+                    const validation = validateImageFile(selectedScreenshot);
+
+                    if (!validation.valid) {
+                        showAlert('register-alert', validation.error, 'error');
+                        event.target.value = ''; // Clear selection
+                        selectedScreenshot = null;
+                        document.getElementById('screenshot-name').textContent = '';
+                        return;
+                    }
+
+                    // Show file size with compression indicator
+                    const sizeMB = (selectedScreenshot.size / 1024 / 1024).toFixed(1);
+                    document.getElementById('screenshot-name').textContent =
+                        `Selected: ${selectedScreenshot.name} (${sizeMB} MB - will be compressed)`;
+                } else {
+                    document.getElementById('screenshot-name').textContent = `Selected: ${selectedScreenshot.name}`;
+                }
             }
         }
 
