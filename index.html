@@ -91,6 +91,11 @@
             color: white;
         }
 
+        .menu-button.payment {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
         .button-icon {
             font-size: 3em;
             min-width: 60px;
@@ -194,6 +199,9 @@
             </div>
         </div>
 
+        <!-- LINE User Greeting (populated by LIFF) -->
+        <div id="line-greeting"></div>
+
         <div class="menu-buttons">
             <a href="points.html" class="menu-button points">
                 <div class="button-icon">⭐</div>
@@ -221,6 +229,15 @@
                 </div>
                 <div class="button-arrow">→</div>
             </a>
+
+            <a href="payment.html" class="menu-button payment">
+                <div class="button-icon">💰</div>
+                <div class="button-content">
+                    <div class="button-title">ชำระเงิน</div>
+                    <div class="button-subtitle">PAYMENT - Make payment & earn points</div>
+                </div>
+                <div class="button-arrow">→</div>
+            </a>
         </div>
 
         <div class="footer">
@@ -228,5 +245,76 @@
             <p>Follow us on TikTok: @cats.n.cards.live</p>
         </div>
     </div>
+
+    <!-- LINE LIFF SDK -->
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+    <!-- LIFF Initialization Module -->
+    <script src="liff-init.js"></script>
+
+    <!-- User Mapping Module -->
+    <script src="user-mapping.js"></script>
+
+    <!-- Initialize LIFF and User Mapping -->
+    <script>
+        // Initialize LIFF when page loads
+        window.addEventListener('DOMContentLoaded', async function() {
+            console.log('[Index] Initializing LIFF...');
+
+            // Initialize LIFF
+            const liffState = await initializeLIFF();
+
+            if (isLIFFReady()) {
+                console.log('[Index] LIFF ready, initializing user mapping...');
+
+                // Initialize user mapping
+                await initializeUserMapping();
+
+                // Show personalized greeting
+                const displayName = getLINEDisplayName();
+                if (displayName) {
+                    const greetingHTML = `
+                        <div style="
+                            background: white;
+                            padding: 20px;
+                            border-radius: 15px;
+                            margin-bottom: 20px;
+                            text-align: center;
+                            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                            animation: fadeInDown 0.6s;
+                        ">
+                            <p style="margin: 0; font-size: 1.3em; color: #333;">
+                                สวัสดี <strong>${displayName}</strong>! 👋
+                            </p>
+                            <p style="margin: 5px 0 0 0; font-size: 0.95em; color: #666;">
+                                ยินดีต้อนรับสู่ Cats N Cards TCG
+                            </p>
+                        </div>
+                    `;
+                    document.getElementById('line-greeting').innerHTML = greetingHTML;
+                }
+
+                console.log('[Index] LIFF initialization complete');
+            } else {
+                console.log('[Index] LIFF not available (not in LINE browser)');
+                // Show message suggesting to open in LINE
+                const greetingHTML = `
+                    <div style="
+                        background: #fff3cd;
+                        border-left: 4px solid #ffc107;
+                        padding: 15px;
+                        border-radius: 8px;
+                        margin-bottom: 20px;
+                    ">
+                        <p style="margin: 0; color: #856404; font-size: 0.95em;">
+                            💡 เปิดใน LINE เพื่อประสบการณ์ที่ดีขึ้น<br>
+                            Open in LINE for better experience
+                        </p>
+                    </div>
+                `;
+                document.getElementById('line-greeting').innerHTML = greetingHTML;
+            }
+        });
+    </script>
 </body>
 </html>

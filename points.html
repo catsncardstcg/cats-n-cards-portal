@@ -317,11 +317,26 @@
         <div class="header">
             <h1>⭐ Points System</h1>
             <p>ระบบสะสมแต้ม</p>
-            <h1>กำลังทำครับบบบบบบ</h1>
+        </div>
 
+        <!-- LINE User Greeting (populated by LIFF) -->
+        <div id="line-greeting"></div>
+
+        <div class="card">
+            <h1 style="text-align: center; color: #f5576c;">กำลังทำครับบบบบบบ</h1>
+            <p style="text-align: center; color: #666; margin-top: 10px;">Under Construction</p>
         </div>
 
     </div>
+
+    <!-- LINE LIFF SDK -->
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+    <!-- LIFF Initialization Module -->
+    <script src="liff-init.js"></script>
+
+    <!-- User Mapping Module -->
+    <script src="user-mapping.js"></script>
 
     <script>
         // Configuration - UPDATE THIS with your Google Apps Script URL
@@ -477,11 +492,63 @@
             const alert = document.getElementById(elementId);
             alert.textContent = message;
             alert.className = `alert ${type} show`;
-            
+
             setTimeout(() => {
                 alert.classList.remove('show');
             }, 5000);
         }
+
+        // Initialize LIFF when page loads
+        window.addEventListener('DOMContentLoaded', async function() {
+            console.log('[Points] Initializing LIFF...');
+
+            // Initialize LIFF
+            const liffState = await initializeLIFF();
+
+            if (isLIFFReady()) {
+                console.log('[Points] LIFF ready, initializing user mapping...');
+
+                // Initialize user mapping
+                await initializeUserMapping();
+
+                // Auto-fill TikTok username (when form is built)
+                const tiktokUsername = getTikTokUsername();
+                if (tiktokUsername) {
+                    currentUsername = tiktokUsername;
+                    // Auto-fill in check-username field when it exists
+                    const usernameField = document.getElementById('check-username');
+                    if (usernameField) {
+                        usernameField.value = tiktokUsername;
+                    }
+                    console.log('[Points] Auto-filled TikTok username:', tiktokUsername);
+                }
+
+                // Show personalized greeting
+                const displayName = getLINEDisplayName();
+                if (displayName) {
+                    const greetingHTML = `
+                        <div style="
+                            background: white;
+                            padding: 15px 20px;
+                            border-radius: 12px;
+                            margin-bottom: 20px;
+                            text-align: center;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                        ">
+                            <p style="margin: 0; font-size: 1.1em; color: #333;">
+                                สวัสดี <strong>${displayName}</strong>! 👋<br>
+                                <span style="font-size: 0.9em; color: #666;">ตรวจสอบแต้มของคุณ</span>
+                            </p>
+                        </div>
+                    `;
+                    document.getElementById('line-greeting').innerHTML = greetingHTML;
+                }
+
+                console.log('[Points] LIFF initialization complete');
+            } else {
+                console.log('[Points] LIFF not available (not in LINE browser)');
+            }
+        });
     </script>
 </body>
 </html>

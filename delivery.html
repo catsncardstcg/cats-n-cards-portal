@@ -347,6 +347,9 @@
             <p>พอร์ทัลจัดส่งสินค้า</p>
         </div>
 
+        <!-- LINE User Greeting (populated by LIFF) -->
+        <div id="line-greeting"></div>
+
         <div class="tabs">
             <button class="tab-button active" onclick="switchTab('register')">
                 📝 Register<br>ลงทะเบียน
@@ -505,13 +508,23 @@
         </div>
     </div>
 
+    <!-- LINE LIFF SDK -->
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+    <!-- LIFF Initialization Module -->
+    <script src="liff-init.js"></script>
+
+    <!-- User Mapping Module -->
+    <script src="user-mapping.js"></script>
+
     <script>
         // Configuration - UPDATE THIS with your Google Apps Script URL
-        const SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
-        
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1sCDdn_Z1TzOrN6rJCy_IZ-u7Va_CTg0AqMG226YhNDbEIW8wHzNyjv9RgU9ZAViH/exec';
+
         let trackingData = [];
         let selectedScreenshot = null;
         let selectedReceipt = null;
+        let lineUserId = null; // Store LINE user ID for backend
 
         // Calculate next delivery round
         function getNextDeliveryRound() {
@@ -683,7 +696,10 @@
                     notes: document.getElementById('notes').value,
                     screenshotFileName: selectedScreenshot.name,
                     screenshotData: base64,
-                    screenshotMimeType: selectedScreenshot.type
+                    screenshotMimeType: selectedScreenshot.type,
+                    lineUserId: lineUserId || null, // Include LINE user ID if available
+                    lineDisplayName: getLINEDisplayName() || null,
+                    linePictureUrl: getLINEPictureUrl() || null
                 };
 
                 try {
@@ -789,7 +805,10 @@
                     tiktokUsername: tiktok,
                     receiptFileName: selectedReceipt.name,
                     receiptData: base64,
-                    receiptMimeType: selectedReceipt.type
+                    receiptMimeType: selectedReceipt.type,
+                    lineUserId: lineUserId || null, // Include LINE user ID if available
+                    lineDisplayName: getLINEDisplayName() || null,
+                    linePictureUrl: getLINEPictureUrl() || null
                 };
 
                 try {
@@ -868,18 +887,84 @@
         // Filter tracking data
         function filterTracking() {
             const searchTerm = document.getElementById('search-tracking').value.toLowerCase();
-            
+
             if (!searchTerm) {
                 displayTrackingData(trackingData);
                 return;
             }
 
-            const filtered = trackingData.filter(row => 
+            const filtered = trackingData.filter(row =>
                 (row.customer || '').toLowerCase().includes(searchTerm)
             );
 
             displayTrackingData(filtered);
         }
+
+        // Initialize LIFF when page loads
+        window.addEventListener('DOMContentLoaded', async function() {
+            console.log('[Delivery] Initializing LIFF...');
+
+            // Initialize LIFF
+            const liffState = await initializeLIFF();
+
+            if (isLIFFReady()) {
+                console.log('[Delivery] LIFF ready, initializing user mapping...');
+
+                // Initialize user mapping
+                await initializeUserMapping();
+
+                // Auto-fill TikTok username in ALL tabs
+                const tiktokUsername = getTikTokUsername();
+                if (tiktokUsername) {
+                    // Tab 1: Register
+                    const registerUsernameField = document.getElementById('tiktok-username');
+                    if (registerUsernameField) {
+                        registerUsernameField.value = tiktokUsername;
+                    }
+
+                    // Tab 2: Request Delivery
+                    const deliveryUsernameField = document.getElementById('delivery-tiktok');
+                    if (deliveryUsernameField) {
+                        deliveryUsernameField.value = tiktokUsername;
+                    }
+
+                    // Tab 3: View Tracking - pre-fill search (optional)
+                    const trackingSearchField = document.getElementById('search-tracking');
+                    if (trackingSearchField) {
+                        trackingSearchField.placeholder = `ค้นหา: ${tiktokUsername}`;
+                    }
+
+                    console.log('[Delivery] Auto-filled TikTok username in all tabs:', tiktokUsername);
+                }
+
+                // Store LINE user ID for backend
+                lineUserId = getLINEUserId();
+
+                // Show personalized greeting
+                const displayName = getLINEDisplayName();
+                if (displayName) {
+                    const greetingHTML = `
+                        <div style="
+                            background: white;
+                            padding: 15px 20px;
+                            border-radius: 12px;
+                            margin-bottom: 20px;
+                            text-align: center;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                        ">
+                            <p style="margin: 0; font-size: 1.1em; color: #333;">
+                                สวัสดี <strong>${displayName}</strong>! 👋
+                            </p>
+                        </div>
+                    `;
+                    document.getElementById('line-greeting').innerHTML = greetingHTML;
+                }
+
+                console.log('[Delivery] LIFF initialization complete');
+            } else {
+                console.log('[Delivery] LIFF not available (not in LINE browser)');
+            }
+        });
     </script>
 </body>
 </html>

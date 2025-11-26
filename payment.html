@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment - Cats N Cards TCG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .back-button {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .back-button:hover {
+            opacity: 1;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1.1em;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #11998e;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert.show {
+            display: block;
+            animation: slideDown 0.3s;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .points-preview {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .points-preview.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            animation: fadeIn 0.3s;
+        }
+
+        .points-preview .points-number {
+            font-size: 2em;
+            font-weight: 700;
+        }
+
+        .qr-section {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .qr-section img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .file-upload {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .file-upload label {
+            display: inline-block;
+            padding: 14px 30px;
+            background: #11998e;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1.1em;
+        }
+
+        .file-upload label:hover {
+            background: #0e8377;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 10px;
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .success-card {
+            text-align: center;
+            padding: 30px 20px;
+        }
+
+        .success-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .success-card h2 {
+            color: #28a745;
+            margin-bottom: 15px;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .info-box p {
+            color: #1565c0;
+            margin: 0;
+            font-size: 0.95em;
+        }
+
+        .delivery-reminder {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .delivery-reminder p {
+            color: #856404;
+            margin: 0;
+        }
+
+        .delivery-reminder a {
+            color: #856404;
+            font-weight: 600;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "———";
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-button">← Back to Home</a>
+
+        <div class="header">
+            <h1>💰 ชำระเงิน</h1>
+            <p>Payment</p>
+        </div>
+
+        <!-- LINE User Greeting (populated by LIFF) -->
+        <div id="line-greeting"></div>
+
+        <!-- Payment Form -->
+        <div class="card" id="payment-form-card">
+            <div id="payment-alert" class="alert"></div>
+
+            <form id="paymentForm" onsubmit="submitPayment(event)">
+                <div class="form-group">
+                    <label for="tiktok-username">TikTok Username ของคุณ</label>
+                    <input type="text" id="tiktok-username" placeholder="@yourusername" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="amount">จำนวนเงิน (บาท)</label>
+                    <input type="number" id="amount" placeholder="500" min="1" required oninput="calculatePoints()">
+                </div>
+
+                <!-- Points Preview -->
+                <div class="points-preview" id="points-preview">
+                    <span>⭐ คุณจะได้รับ</span>
+                    <span class="points-number" id="points-earned">0</span>
+                    <span>แต้ม!</span>
+                </div>
+
+                <div class="divider">สแกนเพื่อชำระเงิน</div>
+
+                <!-- QR Code -->
+                <div class="qr-section">
+                    <img src="qr.png" alt="PromptPay QR Code">
+                    <p style="color: #666; margin-top: 10px; font-size: 0.9em;">PromptPay: นทีธาร ปัญญากร</p>
+                </div>
+
+                <div class="divider">อัปโหลดหลักฐาน</div>
+
+                <!-- Receipt Upload -->
+                <div class="file-upload">
+                    <label for="receipt-upload">
+                        📸 เลือกรูปสลิป
+                    </label>
+                    <input type="file" id="receipt-upload" accept="image/*" onchange="handleReceiptSelect(event)" required>
+                    <div class="file-name" id="receipt-name"></div>
+                </div>
+
+                <button type="submit" class="btn" id="submit-btn">
+                    ✅ ส่งหลักฐานการชำระเงิน
+                </button>
+            </form>
+        </div>
+
+        <!-- Success Card -->
+        <div class="card success-card" id="success-card" style="display: none;">
+            <div class="success-icon">🎉</div>
+            <h2>สำเร็จ!</h2>
+            <p style="color: #666; margin-bottom: 20px;">เราได้รับหลักฐานการชำระเงินแล้ว</p>
+            
+            <div class="info-box">
+                <p>⭐ <strong id="final-points">0</strong> แต้ม จะถูกเพิ่มหลังจากเราตรวจสอบสลิป</p>
+            </div>
+
+            <div class="delivery-reminder">
+                <p>📦 ต้องการให้ส่งของถึงบ้าน?</p>
+                <p style="margin-top: 5px;"><a href="delivery.html">คลิกที่นี่เพื่อลงทะเบียนจัดส่ง →</a></p>
+            </div>
+
+            <button class="btn" onclick="resetForm()" style="margin-top: 20px;">
+                💰 ชำระเงินอีกครั้ง
+            </button>
+        </div>
+    </div>
+
+    <!-- LINE LIFF SDK -->
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+    <!-- LIFF Initialization Module -->
+    <script src="liff-init.js"></script>
+
+    <!-- User Mapping Module -->
+    <script src="user-mapping.js"></script>
+
+    <script>
+        // Configuration - UPDATE THIS with your Google Apps Script URL
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1sCDdn_Z1TzOrN6rJCy_IZ-u7Va_CTg0AqMG226YhNDbEIW8wHzNyjv9RgU9ZAViH/exec';
+        const POINTS_PER_THB = 250; // 250 THB = 1 point
+
+        let selectedReceipt = null;
+        let lineUserId = null; // Store LINE user ID for backend
+
+        // Calculate points preview
+        function calculatePoints() {
+            const amount = parseInt(document.getElementById('amount').value) || 0;
+            const points = Math.floor(amount / POINTS_PER_THB);
+            
+            document.getElementById('points-earned').textContent = points;
+            
+            if (amount > 0) {
+                document.getElementById('points-preview').classList.add('show');
+            } else {
+                document.getElementById('points-preview').classList.remove('show');
+            }
+        }
+
+        // Handle receipt selection
+        function handleReceiptSelect(event) {
+            selectedReceipt = event.target.files[0];
+            
+            if (selectedReceipt) {
+                document.getElementById('receipt-name').textContent = `✅ ${selectedReceipt.name}`;
+            }
+        }
+
+        // Submit payment
+        async function submitPayment(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('tiktok-username').value.trim();
+            const amount = parseInt(document.getElementById('amount').value) || 0;
+            
+            if (!username) {
+                showAlert('❌ กรุณาใส่ TikTok Username', 'error');
+                return;
+            }
+
+            if (amount < 1) {
+                showAlert('❌ กรุณาใส่จำนวนเงิน', 'error');
+                return;
+            }
+
+            if (!selectedReceipt) {
+                showAlert('❌ กรุณาอัปโหลดสลิป', 'error');
+                return;
+            }
+
+            const button = document.getElementById('submit-btn');
+            button.disabled = true;
+            button.textContent = 'กำลังส่ง...';
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64 = e.target.result.split(',')[1];
+                
+                const data = {
+                    action: 'submitPayment',
+                    tiktokUsername: username,
+                    amount: amount,
+                    pointsEarned: Math.floor(amount / POINTS_PER_THB),
+                    receiptFileName: selectedReceipt.name,
+                    receiptData: base64,
+                    receiptMimeType: selectedReceipt.type,
+                    lineUserId: lineUserId || null, // Include LINE user ID if available
+                    lineDisplayName: getLINEDisplayName() || null,
+                    linePictureUrl: getLINEPictureUrl() || null
+                };
+
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Show success
+                        document.getElementById('final-points').textContent = Math.floor(amount / POINTS_PER_THB);
+                        document.getElementById('payment-form-card').style.display = 'none';
+                        document.getElementById('success-card').style.display = 'block';
+                    } else {
+                        showAlert('❌ Error: ' + result.message, 'error');
+                    }
+                } catch (error) {
+                    showAlert('❌ ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่', 'error');
+                }
+
+                button.disabled = false;
+                button.textContent = '✅ ส่งหลักฐานการชำระเงิน';
+            };
+
+            reader.readAsDataURL(selectedReceipt);
+        }
+
+        // Reset form for new payment
+        function resetForm() {
+            document.getElementById('tiktok-username').value = '';
+            document.getElementById('amount').value = '';
+            document.getElementById('receipt-upload').value = '';
+            document.getElementById('receipt-name').textContent = '';
+            document.getElementById('points-preview').classList.remove('show');
+            selectedReceipt = null;
+
+            document.getElementById('success-card').style.display = 'none';
+            document.getElementById('payment-form-card').style.display = 'block';
+        }
+
+        // Show alert
+        function showAlert(message, type) {
+            const alert = document.getElementById('payment-alert');
+            alert.textContent = message;
+            alert.className = `alert ${type} show`;
+
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 5000);
+        }
+
+        // Initialize LIFF when page loads
+        window.addEventListener('DOMContentLoaded', async function() {
+            console.log('[Payment] Initializing LIFF...');
+
+            // Initialize LIFF
+            const liffState = await initializeLIFF();
+
+            if (isLIFFReady()) {
+                console.log('[Payment] LIFF ready, initializing user mapping...');
+
+                // Initialize user mapping
+                await initializeUserMapping();
+
+                // Auto-fill TikTok username
+                const tiktokUsername = getTikTokUsername();
+                if (tiktokUsername) {
+                    document.getElementById('tiktok-username').value = tiktokUsername;
+                    console.log('[Payment] Auto-filled TikTok username:', tiktokUsername);
+                }
+
+                // Store LINE user ID for backend
+                lineUserId = getLINEUserId();
+
+                // Show personalized greeting
+                const displayName = getLINEDisplayName();
+                if (displayName) {
+                    const greetingHTML = `
+                        <div style="
+                            background: white;
+                            padding: 15px 20px;
+                            border-radius: 12px;
+                            margin-bottom: 20px;
+                            text-align: center;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                        ">
+                            <p style="margin: 0; font-size: 1.1em; color: #333;">
+                                สวัสดี <strong>${displayName}</strong>! 👋
+                            </p>
+                        </div>
+                    `;
+                    document.getElementById('line-greeting').innerHTML = greetingHTML;
+                }
+
+                console.log('[Payment] LIFF initialization complete');
+            } else {
+                console.log('[Payment] LIFF not available (not in LINE browser)');
+            }
+        });
+    </script>
+</body>
+</html>
