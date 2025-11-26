@@ -1,6 +1,6 @@
 /**
  * User Mapping Module for Cats N Cards Portal
- * Handles LINE ID <-> TikTok Username mapping
+ * Handles LINE ID <-> TikTok Username mapping with Registration Gate
  */
 
 // Configuration - UPDATE THIS with your Google Apps Script URL
@@ -15,18 +15,114 @@ let userMapping = {
     isLoaded: false
 };
 
+// Loading overlay state
+let loadingOverlay = null;
+
 /**
- * Initialize user mapping system
+ * Show loading overlay with message
+ */
+function showLoadingOverlay(message = 'Loading...') {
+    if (!loadingOverlay) {
+        loadingOverlay = document.createElement('div');
+        loadingOverlay.id = 'registration-loading-overlay';
+        loadingOverlay.innerHTML = `
+            <style>
+                #registration-loading-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    animation: fadeIn 0.2s;
+                }
+                #registration-loading-overlay .loading-content {
+                    text-align: center;
+                    color: white;
+                    padding: 30px;
+                }
+                #registration-loading-overlay .spinner {
+                    width: 50px;
+                    height: 50px;
+                    border: 3px solid rgba(255,255,255,0.3);
+                    border-top-color: white;
+                    border-radius: 50%;
+                    animation: spin 0.8s linear infinite;
+                    margin: 0 auto 20px;
+                }
+                #registration-loading-overlay .message {
+                    font-size: 1.1em;
+                    font-weight: 500;
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes fadeOut {
+                    from { opacity: 1; }
+                    to { opacity: 0; }
+                }
+            </style>
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <div class="message">${message}</div>
+            </div>
+        `;
+        document.body.appendChild(loadingOverlay);
+    } else {
+        loadingOverlay.querySelector('.message').textContent = message;
+    }
+}
+
+/**
+ * Update loading overlay message
+ */
+function updateLoadingMessage(message) {
+    if (loadingOverlay) {
+        loadingOverlay.querySelector('.message').textContent = message;
+    }
+}
+
+/**
+ * Hide loading overlay
+ */
+function hideLoadingOverlay() {
+    if (loadingOverlay) {
+        loadingOverlay.style.animation = 'fadeOut 0.2s';
+        setTimeout(() => {
+            if (loadingOverlay && loadingOverlay.parentNode) {
+                loadingOverlay.parentNode.removeChild(loadingOverlay);
+                loadingOverlay = null;
+            }
+        }, 200);
+    }
+}
+
+/**
+ * Initialize user mapping system with registration gate
  * Must be called after LIFF is initialized
  * @returns {Promise<Object>} User mapping object
  */
 async function initializeUserMapping() {
     try {
+        // Show loading overlay immediately
+        showLoadingOverlay('Initializing...');
+
         // Check if LIFF is ready
         if (!isLIFFReady()) {
             console.log('[UserMapping] LIFF not ready, skipping initialization');
+            hideLoadingOverlay();
             return null;
         }
+
+        updateLoadingMessage('Loading your profile...');
 
         // Get LINE profile
         const lineUserId = getLINEUserId();
@@ -43,11 +139,13 @@ async function initializeUserMapping() {
             const cached = JSON.parse(cachedMapping);
             userMapping.tiktokUsername = cached.tiktokUsername;
             userMapping.isLoaded = true;
-            console.log('[UserMapping] Loaded from cache (instant):', cached.tiktokUsername);
+            console.log('[UserMapping] ✅ Loaded from cache (instant):', cached.tiktokUsername);
+            hideLoadingOverlay();
             return userMapping;
         }
 
         console.log('[UserMapping] No cache, checking backend for:', lineUserId);
+        updateLoadingMessage('Checking registration...');
 
         // Check if mapping exists in backend
         const mapping = await checkUserMapping(lineUserId);
@@ -63,10 +161,12 @@ async function initializeUserMapping() {
                 timestamp: Date.now()
             }));
 
-            console.log('[UserMapping] Found mapping and cached:', mapping.tiktokUsername);
+            console.log('[UserMapping] ✅ Found mapping and cached:', mapping.tiktokUsername);
+            hideLoadingOverlay();
         } else {
-            // First-time user - show popup to get TikTok username
-            console.log('[UserMapping] No mapping found, prompting for TikTok username');
+            // First-time user - show registration modal (blocking)
+            console.log('[UserMapping] No mapping found, showing registration gate');
+            hideLoadingOverlay();
             await promptTikTokUsername();
         }
 
@@ -74,6 +174,7 @@ async function initializeUserMapping() {
 
     } catch (error) {
         console.error('[UserMapping] Initialization error:', error);
+        hideLoadingOverlay();
         return null;
     }
 }
@@ -138,12 +239,13 @@ async function saveUserMapping(lineUserId, tiktokUsername, lineDisplayName, line
 }
 
 /**
- * Show modal popup to prompt user for TikTok username
+ * Show blocking registration modal for first-time users
+ * Modal cannot be dismissed until registration is complete
  * @returns {Promise<string|null>} TikTok username or null if cancelled
  */
 async function promptTikTokUsername() {
     return new Promise((resolve) => {
-        // Create modal overlay
+        // Create blocking modal overlay (cannot click outside to close)
         const modalHTML = `
             <div id="tiktok-username-modal" style="
                 position: fixed;
@@ -151,30 +253,33 @@ async function promptTikTokUsername() {
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0, 0, 0, 0.7);
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                z-index: 10000;
+                z-index: 10001;
                 animation: fadeIn 0.3s;
             ">
-                <div style="
+                <div id="registration-card" style="
                     background: white;
-                    padding: 30px;
+                    padding: 40px 30px;
                     border-radius: 20px;
-                    max-width: 400px;
+                    max-width: 450px;
                     width: 90%;
-                    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
                     text-align: center;
-                    animation: slideUp 0.3s;
+                    animation: slideUp 0.4s;
                 ">
-                    <div style="font-size: 3em; margin-bottom: 15px;">👋</div>
-                    <h2 style="color: #333; margin-bottom: 10px; font-size: 1.5em;">
-                        สวัสดี ${userMapping.lineDisplayName}!
+                    <div style="font-size: 4em; margin-bottom: 15px;">🎮</div>
+                    <h2 style="color: #333; margin-bottom: 10px; font-size: 1.6em; font-weight: 700;">
+                        ยินดีต้อนรับ ${userMapping.lineDisplayName}!
                     </h2>
-                    <p style="color: #666; margin-bottom: 20px; font-size: 1em;">
-                        กรุณาใส่ TikTok Username ของคุณ<br>
-                        เพื่อให้เราจดจำคุณในครั้งถัดไป
+                    <p style="color: #666; margin-bottom: 10px; font-size: 1.05em; line-height: 1.5;">
+                        กรุณาลงทะเบียนด้วย TikTok Username<br>
+                        เพื่อเข้าใช้งาน Cats N Cards Portal
+                    </p>
+                    <p style="color: #999; margin-bottom: 25px; font-size: 0.9em;">
+                        ระบบจะจดจำคุณโดยอัตโนมัติในครั้งถัดไป
                     </p>
                     <input
                         type="text"
@@ -182,32 +287,37 @@ async function promptTikTokUsername() {
                         placeholder="@yourtiktok"
                         style="
                             width: 100%;
-                            padding: 15px;
+                            padding: 16px;
                             border: 2px solid #e0e0e0;
-                            border-radius: 10px;
-                            font-size: 1.1em;
+                            border-radius: 12px;
+                            font-size: 1.15em;
                             margin-bottom: 20px;
                             box-sizing: border-box;
+                            transition: border-color 0.3s;
                         "
                     />
                     <button
                         id="save-tiktok-username-btn"
                         style="
                             width: 100%;
-                            padding: 15px;
+                            padding: 16px;
                             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                             color: white;
                             border: none;
-                            border-radius: 10px;
-                            font-size: 1.1em;
+                            border-radius: 12px;
+                            font-size: 1.15em;
                             font-weight: 600;
                             cursor: pointer;
+                            transition: transform 0.2s, box-shadow 0.2s;
                         "
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102,126,234,0.4)'"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
                     >
-                        บันทึก / Save
+                        ลงทะเบียน / Register
                     </button>
-                    <p style="color: #999; margin-top: 15px; font-size: 0.9em;">
-                        ข้อมูลของคุณจะถูกเก็บไว้อย่างปลอดภัย
+                    <p style="color: #999; margin-top: 20px; font-size: 0.85em; line-height: 1.4;">
+                        🔒 ข้อมูลของคุณจะถูกเก็บไว้อย่างปลอดภัย<br>
+                        เฉพาะเพื่อการระบุตัวตนในระบบเท่านั้น
                     </p>
                 </div>
             </div>
@@ -217,8 +327,13 @@ async function promptTikTokUsername() {
                     to { opacity: 1; }
                 }
                 @keyframes slideUp {
-                    from { transform: translateY(20px); opacity: 0; }
+                    from { transform: translateY(30px); opacity: 0; }
                     to { transform: translateY(0); opacity: 1; }
+                }
+                #tiktok-username-input:focus {
+                    outline: none;
+                    border-color: #667eea;
+                    box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
                 }
             </style>
         `;
@@ -230,8 +345,8 @@ async function promptTikTokUsername() {
         const input = document.getElementById('tiktok-username-input');
         const saveBtn = document.getElementById('save-tiktok-username-btn');
 
-        // Focus input
-        setTimeout(() => input.focus(), 100);
+        // Focus input after a short delay
+        setTimeout(() => input.focus(), 400);
 
         // Handle Enter key
         input.addEventListener('keypress', (e) => {
@@ -247,6 +362,8 @@ async function promptTikTokUsername() {
             if (!tiktokUsername) {
                 input.style.borderColor = '#f44336';
                 input.placeholder = 'กรุณาใส่ TikTok Username';
+                input.style.animation = 'shake 0.3s';
+                setTimeout(() => input.style.animation = '', 300);
                 return;
             }
 
@@ -255,8 +372,10 @@ async function promptTikTokUsername() {
                 ? tiktokUsername
                 : '@' + tiktokUsername;
 
-            // Disable button and show loading
+            // Disable inputs and show loading
+            input.disabled = true;
             saveBtn.disabled = true;
+            saveBtn.style.opacity = '0.7';
             saveBtn.textContent = 'กำลังบันทึก...';
 
             // Save to backend
@@ -279,30 +398,33 @@ async function promptTikTokUsername() {
                 }));
 
                 // Show success message
-                modal.innerHTML = `
-                    <div style="
-                        background: white;
-                        padding: 40px;
-                        border-radius: 20px;
-                        text-align: center;
-                        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-                    ">
-                        <div style="font-size: 4em; margin-bottom: 15px;">✅</div>
-                        <h2 style="color: #4CAF50; margin-bottom: 10px;">สำเร็จ!</h2>
-                        <p style="color: #666;">บันทึก TikTok Username แล้ว</p>
-                    </div>
+                const card = document.getElementById('registration-card');
+                card.style.animation = 'slideUp 0.4s';
+                card.innerHTML = `
+                    <div style="font-size: 5em; margin-bottom: 20px;">✅</div>
+                    <h2 style="color: #4CAF50; margin-bottom: 15px; font-size: 1.8em;">ลงทะเบียนสำเร็จ!</h2>
+                    <p style="color: #666; font-size: 1.1em; margin-bottom: 10px;">
+                        TikTok: <strong>${formattedUsername}</strong>
+                    </p>
+                    <p style="color: #999; font-size: 0.95em;">กำลังเข้าสู่ระบบ...</p>
                 `;
 
-                // Close modal after 1.5 seconds
+                // Close modal and resolve
                 setTimeout(() => {
-                    modal.remove();
-                    resolve(formattedUsername);
+                    modal.style.animation = 'fadeOut 0.3s';
+                    setTimeout(() => {
+                        modal.remove();
+                        resolve(formattedUsername);
+                    }, 300);
                 }, 1500);
             } else {
-                // Save failed
-                alert('ไม่สามารถบันทึกได้ กรุณาลองใหม่');
+                // Save failed - allow retry
+                alert('❌ ไม่สามารถบันทึกได้ กรุณาลองใหม่\nPlease try again');
+                input.disabled = false;
                 saveBtn.disabled = false;
-                saveBtn.textContent = 'บันทึก / Save';
+                saveBtn.style.opacity = '1';
+                saveBtn.textContent = 'ลงทะเบียน / Register';
+                input.focus();
             }
         };
     });
