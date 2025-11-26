@@ -740,24 +740,65 @@
             }
         }
 
-        // Register Address with Screenshot
+        // Register Address with Screenshot (with compression)
         async function registerAddress(event) {
             event.preventDefault();
-            
+
             if (!selectedScreenshot) {
                 showAlert('register-alert', '❌ Please upload TikTok profile screenshot / กรุณาอัปโหลด screenshot โปรไฟล์', 'error');
                 return;
             }
 
             const button = document.getElementById('register-btn');
-            button.disabled = true;
-            button.textContent = 'Uploading... / กำลังส่ง...';
+            const progressDiv = document.getElementById('register-upload-progress');
 
-            // Convert screenshot to base64
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const base64 = e.target.result.split(',')[1];
-                
+            button.disabled = true;
+            button.textContent = 'Processing... / กำลังประมวลผล...';
+            progressDiv.style.display = 'block';
+
+            try {
+                let base64Data, mimeType;
+
+                // Use compression if enabled and available
+                if (ENABLE_IMAGE_COMPRESSION && typeof processImageForUpload === 'function') {
+                    console.log('[Delivery] Using image compression for screenshot');
+
+                    // Process image: validate → compress → Base64
+                    const result = await processImageForUpload(
+                        selectedScreenshot,
+                        'screenshot',
+                        {
+                            progressBar: 'register-progress-fill',
+                            statusText: 'register-progress-text'
+                        }
+                    );
+
+                    base64Data = result.base64;
+                    mimeType = 'image/jpeg';
+
+                    console.log('[Delivery] Screenshot compression stats:', result.stats);
+                } else {
+                    console.log('[Delivery] Using original upload (no compression)');
+
+                    // Fallback: original FileReader method
+                    updateProgressBar('register-progress-fill', 50);
+                    updateStatusText('register-progress-text', 'Processing image... / กำลังประมวลผลรูปภาพ...');
+
+                    base64Data = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                        reader.onerror = () => reject(new Error('Failed to read file'));
+                        reader.readAsDataURL(selectedScreenshot);
+                    });
+
+                    mimeType = selectedScreenshot.type;
+                }
+
+                // Show upload status
+                updateProgressBar('register-progress-fill', 90);
+                updateStatusText('register-progress-text', 'Uploading to server... / กำลังส่งข้อมูล...');
+
+                // Prepare data payload
                 const data = {
                     action: 'registerAddress',
                     tiktokUsername: document.getElementById('tiktok-username').value,
@@ -766,38 +807,44 @@
                     address: document.getElementById('address').value,
                     notes: document.getElementById('notes').value,
                     screenshotFileName: selectedScreenshot.name,
-                    screenshotData: base64,
-                    screenshotMimeType: selectedScreenshot.type,
-                    lineUserId: lineUserId || null, // Include LINE user ID if available
+                    screenshotData: base64Data,
+                    screenshotMimeType: mimeType,
+                    lineUserId: lineUserId || null,
                     lineDisplayName: getLINEDisplayName() || null,
                     linePictureUrl: getLINEPictureUrl() || null
                 };
 
-                try {
-                    const response = await fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        body: JSON.stringify(data)
-                    });
+                // Submit to backend
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
 
-                    const result = await response.json();
+                const result = await response.json();
 
-                    if (result.success) {
+                if (result.success) {
+                    // Show success
+                    updateProgressBar('register-progress-fill', 100);
+                    updateStatusText('register-progress-text', '✅ Upload complete! / อัปโหลดสำเร็จ!');
+
+                    setTimeout(() => {
                         showAlert('register-alert', '✅ Registration submitted! We will verify and approve within 24 hours. / ส่งคำขอสำเร็จ! เราจะตรวจสอบภายใน 24 ชั่วโมง', 'success');
                         event.target.reset();
                         selectedScreenshot = null;
                         document.getElementById('screenshot-name').textContent = '';
-                    } else {
-                        showAlert('register-alert', '❌ Error: ' + result.message, 'error');
-                    }
-                } catch (error) {
-                    showAlert('register-alert', '❌ Connection error. Please try again. / เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
+                        progressDiv.style.display = 'none';
+                    }, 1000);
+                } else {
+                    throw new Error(result.message || 'Registration failed');
                 }
-
+            } catch (error) {
+                console.error('[Delivery] Registration error:', error);
+                showAlert('register-alert', '❌ ' + error.message, 'error');
+                progressDiv.style.display = 'none';
+            } finally {
                 button.disabled = false;
                 button.textContent = '📝 Register / ลงทะเบียน';
-            };
-
-            reader.readAsDataURL(selectedScreenshot);
+            }
         }
 
         // Show QR Code for payment
@@ -847,70 +894,138 @@
         // Handle receipt selection
         function handleReceiptSelect(event) {
             selectedReceipt = event.target.files[0];
-            
+
             if (selectedReceipt) {
-                document.getElementById('receipt-name').textContent = `Selected: ${selectedReceipt.name}`;
+                // Validate file if compression is enabled
+                if (ENABLE_IMAGE_COMPRESSION && typeof validateImageFile === 'function') {
+                    const validation = validateImageFile(selectedReceipt);
+
+                    if (!validation.valid) {
+                        showAlert('delivery-alert', validation.error, 'error');
+                        event.target.value = ''; // Clear selection
+                        selectedReceipt = null;
+                        document.getElementById('receipt-name').textContent = '';
+                        document.getElementById('submit-delivery-btn').disabled = true;
+                        return;
+                    }
+
+                    // Show file size with compression indicator
+                    const sizeMB = (selectedReceipt.size / 1024 / 1024).toFixed(1);
+                    document.getElementById('receipt-name').textContent =
+                        `Selected: ${selectedReceipt.name} (${sizeMB} MB - will be compressed)`;
+                } else {
+                    document.getElementById('receipt-name').textContent = `Selected: ${selectedReceipt.name}`;
+                }
+
                 document.getElementById('submit-delivery-btn').disabled = false;
             }
         }
 
-        // Submit delivery request
+        // Submit delivery request (with compression)
         async function submitDeliveryRequest() {
             const tiktok = document.getElementById('delivery-tiktok').value.trim();
-            
+
             if (!selectedReceipt) {
                 showAlert('delivery-alert', '❌ Please upload payment receipt / กรุณาอัปโหลดหลักฐานการโอน', 'error');
                 return;
             }
 
             const button = document.getElementById('submit-delivery-btn');
-            button.disabled = true;
-            button.textContent = 'Uploading... / กำลังส่ง...';
+            const progressDiv = document.getElementById('delivery-upload-progress');
 
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const base64 = e.target.result.split(',')[1];
-                
+            button.disabled = true;
+            button.textContent = 'Processing... / กำลังประมวลผล...';
+            progressDiv.style.display = 'block';
+
+            try {
+                let base64Data, mimeType;
+
+                // Use compression if enabled and available
+                if (ENABLE_IMAGE_COMPRESSION && typeof processImageForUpload === 'function') {
+                    console.log('[Delivery] Using image compression for receipt');
+
+                    // Process image: validate → compress → Base64
+                    const result = await processImageForUpload(
+                        selectedReceipt,
+                        'receipt',
+                        {
+                            progressBar: 'delivery-progress-fill',
+                            statusText: 'delivery-progress-text'
+                        }
+                    );
+
+                    base64Data = result.base64;
+                    mimeType = 'image/jpeg';
+
+                    console.log('[Delivery] Receipt compression stats:', result.stats);
+                } else {
+                    console.log('[Delivery] Using original upload (no compression)');
+
+                    // Fallback: original FileReader method
+                    updateProgressBar('delivery-progress-fill', 50);
+                    updateStatusText('delivery-progress-text', 'Processing image... / กำลังประมวลผลรูปภาพ...');
+
+                    base64Data = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                        reader.onerror = () => reject(new Error('Failed to read file'));
+                        reader.readAsDataURL(selectedReceipt);
+                    });
+
+                    mimeType = selectedReceipt.type;
+                }
+
+                // Show upload status
+                updateProgressBar('delivery-progress-fill', 90);
+                updateStatusText('delivery-progress-text', 'Uploading to server... / กำลังส่งข้อมูล...');
+
+                // Prepare data payload
                 const data = {
                     action: 'requestDelivery',
                     tiktokUsername: tiktok,
                     receiptFileName: selectedReceipt.name,
-                    receiptData: base64,
-                    receiptMimeType: selectedReceipt.type,
-                    lineUserId: lineUserId || null, // Include LINE user ID if available
+                    receiptData: base64Data,
+                    receiptMimeType: mimeType,
+                    lineUserId: lineUserId || null,
                     lineDisplayName: getLINEDisplayName() || null,
                     linePictureUrl: getLINEPictureUrl() || null
                 };
 
-                try {
-                    const response = await fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        body: JSON.stringify(data)
-                    });
+                // Submit to backend
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
 
-                    const result = await response.json();
+                const result = await response.json();
 
-                    if (result.success) {
+                if (result.success) {
+                    // Show success
+                    updateProgressBar('delivery-progress-fill', 100);
+                    updateStatusText('delivery-progress-text', '✅ Upload complete! / อัปโหลดสำเร็จ!');
+
+                    setTimeout(() => {
                         showAlert('delivery-alert', '✅ Delivery request submitted! / ส่งคำขอจัดส่งสำเร็จ!', 'success');
-                        
+
                         document.getElementById('delivery-tiktok').value = '';
                         document.getElementById('receipt-upload').value = '';
                         document.getElementById('receipt-name').textContent = '';
                         document.getElementById('qr-section').classList.remove('show');
                         document.getElementById('deliveryForm').style.display = 'block';
                         selectedReceipt = null;
-                    } else {
-                        showAlert('delivery-alert', '❌ Error: ' + result.message, 'error');
-                    }
-                } catch (error) {
-                    showAlert('delivery-alert', '❌ Connection error. Please try again. / เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
+                        progressDiv.style.display = 'none';
+                    }, 1000);
+                } else {
+                    throw new Error(result.message || 'Delivery request failed');
                 }
-
+            } catch (error) {
+                console.error('[Delivery] Request error:', error);
+                showAlert('delivery-alert', '❌ ' + error.message, 'error');
+                progressDiv.style.display = 'none';
+            } finally {
                 button.disabled = false;
                 button.textContent = '✅ Submit Request / ส่งคำขอจัดส่ง';
-            };
-
-            reader.readAsDataURL(selectedReceipt);
+            }
         }
 
         // Load tracking data
