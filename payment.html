@@ -278,6 +278,34 @@
             content: "———";
             margin: 0 10px;
         }
+
+        /* Upload Progress UI */
+        .upload-progress {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #11998e, #38ef7d);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            margin: 0;
+            color: #666;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -333,6 +361,14 @@
                     <div class="file-name" id="receipt-name"></div>
                 </div>
 
+                <!-- Upload Progress -->
+                <div id="upload-progress" class="upload-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <p class="progress-text" id="progress-text">Preparing upload...</p>
+                </div>
+
                 <button type="submit" class="btn" id="submit-btn">
                     ✅ ส่งหลักฐานการชำระเงิน
                 </button>
@@ -369,6 +405,12 @@
     <!-- User Mapping Module -->
     <script src="user-mapping.js"></script>
 
+    <!-- Image Compression Library -->
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+
+    <!-- Image Compression Utilities -->
+    <script src="image-compression-utils.js"></script>
+
     <script>
         // Configuration - UPDATE THIS with your Google Apps Script URL
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw1sCDdn_Z1TzOrN6rJCy_IZ-u7Va_CTg0AqMG226YhNDbEIW8wHzNyjv9RgU9ZAViH/exec';
@@ -392,21 +434,42 @@
         }
 
         // Handle receipt selection
+        // Feature flag for compression (set to false to disable)
+        const ENABLE_IMAGE_COMPRESSION = true;
+
         function handleReceiptSelect(event) {
             selectedReceipt = event.target.files[0];
-            
+
             if (selectedReceipt) {
-                document.getElementById('receipt-name').textContent = `✅ ${selectedReceipt.name}`;
+                // Validate file if compression is enabled
+                if (ENABLE_IMAGE_COMPRESSION && typeof validateImageFile === 'function') {
+                    const validation = validateImageFile(selectedReceipt);
+
+                    if (!validation.valid) {
+                        showAlert(validation.error, 'error');
+                        event.target.value = ''; // Clear selection
+                        selectedReceipt = null;
+                        document.getElementById('receipt-name').textContent = '';
+                        return;
+                    }
+
+                    // Show file size with compression indicator
+                    const sizeMB = (selectedReceipt.size / 1024 / 1024).toFixed(1);
+                    document.getElementById('receipt-name').textContent =
+                        `✅ ${selectedReceipt.name} (${sizeMB} MB - will be compressed)`;
+                } else {
+                    document.getElementById('receipt-name').textContent = `✅ ${selectedReceipt.name}`;
+                }
             }
         }
 
-        // Submit payment
+        // Submit payment with image compression
         async function submitPayment(event) {
             event.preventDefault();
-            
+
             const username = document.getElementById('tiktok-username').value.trim();
             const amount = parseInt(document.getElementById('amount').value) || 0;
-            
+
             if (!username) {
                 showAlert('❌ กรุณาใส่ TikTok Username', 'error');
                 return;
@@ -423,51 +486,98 @@
             }
 
             const button = document.getElementById('submit-btn');
-            button.disabled = true;
-            button.textContent = 'กำลังส่ง...';
+            const progressDiv = document.getElementById('upload-progress');
 
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const base64 = e.target.result.split(',')[1];
-                
+            button.disabled = true;
+            button.textContent = 'กำลังประมวลผล...';
+            progressDiv.style.display = 'block';
+
+            try {
+                let base64Data, mimeType;
+
+                // Use compression if enabled and available
+                if (ENABLE_IMAGE_COMPRESSION && typeof processImageForUpload === 'function') {
+                    console.log('[Payment] Using image compression');
+
+                    // Process image: validate → compress → Base64
+                    const result = await processImageForUpload(
+                        selectedReceipt,
+                        'receipt',
+                        {
+                            progressBar: 'progress-fill',
+                            statusText: 'progress-text'
+                        }
+                    );
+
+                    base64Data = result.base64;
+                    mimeType = 'image/jpeg'; // Always JPEG after compression
+
+                    console.log('[Payment] Compression stats:', result.stats);
+                } else {
+                    console.log('[Payment] Using original upload (no compression)');
+
+                    // Fallback: original FileReader method
+                    updateProgressBar('progress-fill', 50);
+                    updateStatusText('progress-text', 'Processing image... / กำลังประมวลผลรูปภาพ...');
+
+                    base64Data = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+                        reader.onerror = () => reject(new Error('Failed to read file'));
+                        reader.readAsDataURL(selectedReceipt);
+                    });
+
+                    mimeType = selectedReceipt.type;
+                }
+
+                // Show upload status
+                updateProgressBar('progress-fill', 90);
+                updateStatusText('progress-text', 'Uploading to server... / กำลังส่งข้อมูล...');
+
+                // Prepare data payload
                 const data = {
                     action: 'submitPayment',
                     tiktokUsername: username,
                     amount: amount,
                     pointsEarned: Math.floor(amount / POINTS_PER_THB),
                     receiptFileName: selectedReceipt.name,
-                    receiptData: base64,
-                    receiptMimeType: selectedReceipt.type,
-                    lineUserId: lineUserId || null, // Include LINE user ID if available
+                    receiptData: base64Data,
+                    receiptMimeType: mimeType,
+                    lineUserId: lineUserId || null,
                     lineDisplayName: getLINEDisplayName() || null,
                     linePictureUrl: getLINEPictureUrl() || null
                 };
 
-                try {
-                    const response = await fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        body: JSON.stringify(data)
-                    });
+                // Submit to backend
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
 
-                    const result = await response.json();
+                const result = await response.json();
 
-                    if (result.success) {
-                        // Show success
+                if (result.success) {
+                    // Show success
+                    updateProgressBar('progress-fill', 100);
+                    updateStatusText('progress-text', '✅ Upload complete! / อัปโหลดสำเร็จ!');
+
+                    setTimeout(() => {
                         document.getElementById('final-points').textContent = Math.floor(amount / POINTS_PER_THB);
                         document.getElementById('payment-form-card').style.display = 'none';
                         document.getElementById('success-card').style.display = 'block';
-                    } else {
-                        showAlert('❌ Error: ' + result.message, 'error');
-                    }
-                } catch (error) {
-                    showAlert('❌ ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่', 'error');
+                        progressDiv.style.display = 'none';
+                    }, 1000);
+                } else {
+                    throw new Error(result.message || 'Upload failed');
                 }
-
+            } catch (error) {
+                console.error('[Payment] Upload error:', error);
+                showAlert('❌ ' + error.message, 'error');
+                progressDiv.style.display = 'none';
+            } finally {
                 button.disabled = false;
                 button.textContent = '✅ ส่งหลักฐานการชำระเงิน';
-            };
-
-            reader.readAsDataURL(selectedReceipt);
+            }
         }
 
         // Reset form for new payment
