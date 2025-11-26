@@ -37,16 +37,33 @@ async function initializeUserMapping() {
         userMapping.lineDisplayName = lineDisplayName;
         userMapping.linePictureUrl = linePictureUrl;
 
-        console.log('[UserMapping] Checking mapping for LINE user:', lineUserId);
+        // Check sessionStorage cache first (instant!)
+        const cachedMapping = sessionStorage.getItem(`mapping_${lineUserId}`);
+        if (cachedMapping) {
+            const cached = JSON.parse(cachedMapping);
+            userMapping.tiktokUsername = cached.tiktokUsername;
+            userMapping.isLoaded = true;
+            console.log('[UserMapping] Loaded from cache (instant):', cached.tiktokUsername);
+            return userMapping;
+        }
+
+        console.log('[UserMapping] No cache, checking backend for:', lineUserId);
 
         // Check if mapping exists in backend
         const mapping = await checkUserMapping(lineUserId);
 
         if (mapping && mapping.success && mapping.tiktokUsername) {
-            // User has existing mapping
+            // User has existing mapping - cache it!
             userMapping.tiktokUsername = mapping.tiktokUsername;
             userMapping.isLoaded = true;
-            console.log('[UserMapping] Found existing mapping:', mapping.tiktokUsername);
+
+            // Cache for instant load on other pages
+            sessionStorage.setItem(`mapping_${lineUserId}`, JSON.stringify({
+                tiktokUsername: mapping.tiktokUsername,
+                timestamp: Date.now()
+            }));
+
+            console.log('[UserMapping] Found mapping and cached:', mapping.tiktokUsername);
         } else {
             // First-time user - show popup to get TikTok username
             console.log('[UserMapping] No mapping found, prompting for TikTok username');
@@ -69,11 +86,22 @@ async function initializeUserMapping() {
 async function checkUserMapping(lineUserId) {
     try {
         const url = `${BACKEND_URL}?action=getUserMapping&lineUserId=${encodeURIComponent(lineUserId)}`;
-        const response = await fetch(url);
+
+        // Add 3 second timeout - if backend is slow, fail fast
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         const result = await response.json();
         return result;
     } catch (error) {
-        console.error('[UserMapping] Error checking mapping:', error);
+        if (error.name === 'AbortError') {
+            console.warn('[UserMapping] Backend timeout (>3s), treating as no mapping');
+        } else {
+            console.error('[UserMapping] Error checking mapping:', error);
+        }
         return { success: false, error: error.message };
     }
 }
@@ -243,6 +271,12 @@ async function promptTikTokUsername() {
                 // Save successful
                 userMapping.tiktokUsername = formattedUsername;
                 userMapping.isLoaded = true;
+
+                // Cache immediately for instant access on other pages
+                sessionStorage.setItem(`mapping_${userMapping.lineUserId}`, JSON.stringify({
+                    tiktokUsername: formattedUsername,
+                    timestamp: Date.now()
+                }));
 
                 // Show success message
                 modal.innerHTML = `
