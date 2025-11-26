@@ -582,15 +582,28 @@
 
         // Reset form for new payment
         function resetForm() {
-            document.getElementById('tiktok-username').value = '';
+            // Clear form fields
             document.getElementById('amount').value = '';
             document.getElementById('receipt-upload').value = '';
             document.getElementById('receipt-name').textContent = '';
             document.getElementById('points-preview').classList.remove('show');
             selectedReceipt = null;
 
+            // Auto-fill TikTok username (don't clear it!)
+            const tiktokUsername = getTikTokUsername();
+            if (tiktokUsername) {
+                document.getElementById('tiktok-username').value = tiktokUsername;
+                console.log('[Payment] Auto-filled TikTok username on reset:', tiktokUsername);
+            }
+
+            // Switch back to form view
             document.getElementById('success-card').style.display = 'none';
             document.getElementById('payment-form-card').style.display = 'block';
+
+            // Focus on amount field for quick entry
+            setTimeout(() => {
+                document.getElementById('amount').focus();
+            }, 100);
         }
 
         // Show alert

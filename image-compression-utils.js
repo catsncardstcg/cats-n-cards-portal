@@ -69,7 +69,8 @@ const COMPRESSION_PRESETS = {
 const VALIDATION_CONFIG = {
     maxOriginalSizeMB: 20,
     maxCompressedSizeMB: 2,
-    allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic']
+    allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'],
+    compressionThresholdMB: 0.5  // Only compress files larger than 500KB
 };
 
 // ============================================================================
@@ -258,33 +259,48 @@ async function processImageForUpload(file, presetType, uiElements = {}) {
 
         updateProgressBar(progressBar, 10);
 
-        // Step 2: Compress image (10-70%)
-        updateStatusText(statusText, `Compressing image (Preset ${ACTIVE_PRESET})... / กำลังบีบอัดรูปภาพ...`);
+        // Check file size - skip compression for small files
+        const fileSizeMB = file.size / 1024 / 1024;
+        const shouldCompress = fileSizeMB > VALIDATION_CONFIG.compressionThresholdMB;
 
-        const compressedFile = await compressImage(file, presetType, (progress) => {
-            // Map compression progress (0-100) to our progress range (10-70)
-            const mappedProgress = 10 + (progress * 0.6);
-            updateProgressBar(progressBar, mappedProgress);
-        });
+        let finalFile = file;
+        let compressionRatio = '0%';
+
+        if (shouldCompress) {
+            // Step 2: Compress image (10-70%)
+            updateStatusText(statusText, `Compressing image (Preset ${ACTIVE_PRESET})... / กำลังบีบอัดรูปภาพ...`);
+
+            finalFile = await compressImage(file, presetType, (progress) => {
+                // Map compression progress (0-100) to our progress range (10-70)
+                const mappedProgress = 10 + (progress * 0.6);
+                updateProgressBar(progressBar, mappedProgress);
+            });
+
+            compressionRatio = ((1 - finalFile.size / file.size) * 100).toFixed(1) + '%';
+            console.log('[ImageCompression] File compressed');
+            console.log('[ImageCompression] Original:', formatFileSize(file.size));
+            console.log('[ImageCompression] Compressed:', formatFileSize(finalFile.size));
+            console.log('[ImageCompression] Reduction:', compressionRatio);
+        } else {
+            // Skip compression - file already small
+            console.log('[ImageCompression] File already small (' + formatFileSize(file.size) + '), skipping compression');
+            updateStatusText(statusText, 'File already optimized, skipping compression... / ไฟล์เหมาะสมแล้ว ข้ามการบีบอัด...');
+        }
 
         updateProgressBar(progressBar, 70);
 
         // Step 3: Convert to Base64 (70-80%)
         updateStatusText(statusText, 'Converting to upload format... / กำลังแปลงไฟล์...');
 
-        const base64 = await readFileAsBase64(compressedFile);
+        const base64 = await readFileAsBase64(finalFile);
 
         updateProgressBar(progressBar, 80);
 
         // Calculate stats
         const originalSize = file.size;
-        const compressedSize = compressedFile.size;
-        const compressionRatio = ((1 - compressedSize / originalSize) * 100).toFixed(1) + '%';
+        const compressedSize = finalFile.size;
 
         console.log('[ImageCompression] Processing complete');
-        console.log('[ImageCompression] Original:', formatFileSize(originalSize));
-        console.log('[ImageCompression] Compressed:', formatFileSize(compressedSize));
-        console.log('[ImageCompression] Reduction:', compressionRatio);
 
         return {
             base64: base64,
@@ -293,7 +309,8 @@ async function processImageForUpload(file, presetType, uiElements = {}) {
                 compressedSize: compressedSize,
                 compressionRatio: compressionRatio,
                 originalSizeFormatted: formatFileSize(originalSize),
-                compressedSizeFormatted: formatFileSize(compressedSize)
+                compressedSizeFormatted: formatFileSize(compressedSize),
+                skippedCompression: !shouldCompress
             }
         };
     } catch (error) {
