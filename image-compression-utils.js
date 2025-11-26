@@ -11,7 +11,7 @@
 // ============================================================================
 
 // Change this to 1, 2, or 3 to test different compression levels
-const ACTIVE_PRESET = 1;
+const ACTIVE_PRESET = 3;
 
 // Compression presets for testing
 const COMPRESSION_PRESETS = {
