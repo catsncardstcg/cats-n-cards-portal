@@ -19,6 +19,87 @@ let userMapping = {
 let loadingOverlay = null;
 
 /**
+ * Show debug panel with registration info (for troubleshooting)
+ */
+function showDebugPanel(lineUserId, backendResponse) {
+    // Remove existing debug panel if any
+    const existing = document.getElementById('debug-panel');
+    if (existing) existing.remove();
+
+    const panel = document.createElement('div');
+    panel.id = 'debug-panel';
+    panel.innerHTML = `
+        <style>
+            #debug-panel {
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                background: white;
+                border: 3px solid #f44336;
+                border-radius: 12px;
+                padding: 15px;
+                z-index: 10002;
+                font-family: monospace;
+                font-size: 12px;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+            #debug-panel h3 {
+                margin: 0 0 10px 0;
+                color: #f44336;
+                font-size: 14px;
+            }
+            #debug-panel .debug-row {
+                margin: 8px 0;
+                padding: 8px;
+                background: #f5f5f5;
+                border-radius: 4px;
+                word-break: break-all;
+            }
+            #debug-panel .debug-label {
+                font-weight: bold;
+                color: #333;
+            }
+            #debug-panel .debug-value {
+                color: #666;
+                margin-top: 4px;
+            }
+            #debug-panel button {
+                margin-top: 10px;
+                padding: 8px 16px;
+                background: #f44336;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 12px;
+                cursor: pointer;
+            }
+        </style>
+        <h3>🔍 Registration Debug Info</h3>
+        <div class="debug-row">
+            <div class="debug-label">LINE User ID:</div>
+            <div class="debug-value">${lineUserId || 'null'}</div>
+        </div>
+        <div class="debug-row">
+            <div class="debug-label">Backend Response:</div>
+            <div class="debug-value">${JSON.stringify(backendResponse, null, 2)}</div>
+        </div>
+        <div class="debug-row">
+            <div class="debug-label">Check Results:</div>
+            <div class="debug-value">
+                mapping exists: ${!!backendResponse}<br>
+                mapping.success: ${backendResponse?.success}<br>
+                mapping.tiktokUsername: ${backendResponse?.tiktokUsername || 'null'}
+            </div>
+        </div>
+        <button onclick="document.getElementById('debug-panel').remove()">Close Debug Panel</button>
+    `;
+    document.body.appendChild(panel);
+}
+
+/**
  * Show loading overlay with message
  */
 function showLoadingOverlay(message = 'Loading...') {
@@ -162,6 +243,9 @@ async function initializeUserMapping() {
         console.log('  - mapping exists:', !!mapping);
         console.log('  - mapping.success:', mapping?.success);
         console.log('  - mapping.tiktokUsername:', mapping?.tiktokUsername);
+
+        // DEBUG: Show debug panel on screen (for mobile testing)
+        showDebugPanel(lineUserId, mapping);
 
         if (mapping && mapping.success && mapping.tiktokUsername) {
             // User has existing mapping - cache it!
