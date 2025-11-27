@@ -133,6 +133,12 @@ async function initializeUserMapping() {
         userMapping.lineDisplayName = lineDisplayName;
         userMapping.linePictureUrl = linePictureUrl;
 
+        // DEBUG: Show LINE user ID for verification
+        console.log('========================================');
+        console.log('[UserMapping] 🔍 LINE USER ID:', lineUserId);
+        console.log('[UserMapping] 👤 Display Name:', lineDisplayName);
+        console.log('========================================');
+
         // Check sessionStorage cache first (instant!)
         const cachedMapping = sessionStorage.getItem(`mapping_${lineUserId}`);
         if (cachedMapping) {
@@ -149,6 +155,13 @@ async function initializeUserMapping() {
 
         // Check if mapping exists in backend
         const mapping = await checkUserMapping(lineUserId);
+
+        // DEBUG: Log full response from backend
+        console.log('[UserMapping] Backend response:', JSON.stringify(mapping, null, 2));
+        console.log('[UserMapping] Checking conditions:');
+        console.log('  - mapping exists:', !!mapping);
+        console.log('  - mapping.success:', mapping?.success);
+        console.log('  - mapping.tiktokUsername:', mapping?.tiktokUsername);
 
         if (mapping && mapping.success && mapping.tiktokUsername) {
             // User has existing mapping - cache it!
