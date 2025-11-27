@@ -285,9 +285,9 @@ async function checkUserMapping(lineUserId) {
     try {
         const url = `${BACKEND_URL}?action=getUserMapping&lineUserId=${encodeURIComponent(lineUserId)}`;
 
-        // Add 3 second timeout - if backend is slow, fail fast
+        // Add 10 second timeout - Google Apps Script can be slow
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
@@ -296,7 +296,7 @@ async function checkUserMapping(lineUserId) {
         return result;
     } catch (error) {
         if (error.name === 'AbortError') {
-            console.warn('[UserMapping] Backend timeout (>3s), treating as no mapping');
+            console.warn('[UserMapping] Backend timeout (>10s), treating as no mapping');
         } else {
             console.error('[UserMapping] Error checking mapping:', error);
         }
