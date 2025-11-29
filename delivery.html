@@ -559,14 +559,29 @@
     <script src="liff-init.js"></script>
 
     <!-- Firebase SDK (for fast user mapping) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <!-- Diagnostic: Check if Firebase loaded -->
+    <script defer>
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                console.log('[DIAGNOSTIC] typeof firebase after 1s:', typeof firebase);
+                if (typeof firebase === 'undefined') {
+                    console.error('[DIAGNOSTIC] ⚠️ Firebase SDK failed to load from CDN!');
+                    console.error('[DIAGNOSTIC] This might be blocked by LINE browser or network.');
+                } else {
+                    console.log('[DIAGNOSTIC] ✅ Firebase SDK loaded successfully!');
+                }
+            }, 1000);
+        });
+    </script>
 
     <!-- Firebase Configuration -->
-    <script src="firebase-config.js"></script>
+    <script defer src="firebase-config.js"></script>
 
     <!-- User Mapping Module -->
-    <script src="user-mapping.js"></script>
+    <script defer src="user-mapping.js"></script>
 
     <!-- Image Compression Library -->
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
