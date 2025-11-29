@@ -60,20 +60,37 @@ function isFirebaseReady() {
     return firebaseDatabase !== null;
 }
 
-// Auto-initialize Firebase when script loads
-console.log('[Firebase Config] Script loaded');
-console.log('[Firebase Config] Checking if Firebase SDK is available...');
-console.log('[Firebase Config] typeof firebase:', typeof firebase);
+// Auto-initialize Firebase when script loads (with retry for CDN loading)
+console.log('[Firebase Config] Script loaded, waiting for Firebase SDK...');
 
-if (typeof firebase !== 'undefined') {
-    console.log('[Firebase Config] ✅ Firebase SDK found, initializing...');
-    const result = initializeFirebase();
-    if (result) {
-        console.log('[Firebase Config] ✅ Initialization successful!');
+let initAttempts = 0;
+const maxAttempts = 20; // Try for ~2 seconds
+
+function attemptFirebaseInit() {
+    initAttempts++;
+    console.log(`[Firebase Config] Attempt ${initAttempts}/${maxAttempts} - typeof firebase:`, typeof firebase);
+
+    if (typeof firebase !== 'undefined') {
+        console.log('[Firebase Config] ✅ Firebase SDK found! Initializing...');
+        const result = initializeFirebase();
+        if (result) {
+            console.log('[Firebase Config] ✅ Initialization successful!');
+            console.log('[Firebase Config] Database ready at:', firebaseConfig.databaseURL);
+        } else {
+            console.error('[Firebase Config] ❌ Initialization failed!');
+        }
+        return true;
+    } else if (initAttempts >= maxAttempts) {
+        console.error('[Firebase Config] ❌ Firebase SDK never loaded after', maxAttempts, 'attempts');
+        console.error('[Firebase Config] Expected CDN scripts: firebase-app-compat.js and firebase-database-compat.js');
+        console.error('[Firebase Config] Falling back to Google Apps Script backend');
+        return true; // Stop trying
     } else {
-        console.error('[Firebase Config] ❌ Initialization failed!');
+        // Try again in 100ms
+        setTimeout(attemptFirebaseInit, 100);
+        return false;
     }
-} else {
-    console.error('[Firebase Config] ❌ Firebase SDK not loaded! Check if CDN scripts are loading.');
-    console.error('[Firebase Config] Expected scripts: firebase-app-compat.js and firebase-database-compat.js');
 }
+
+// Start attempting to initialize
+attemptFirebaseInit();
