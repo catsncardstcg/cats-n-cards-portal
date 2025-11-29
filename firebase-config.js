@@ -61,8 +61,19 @@ function isFirebaseReady() {
 }
 
 // Auto-initialize Firebase when script loads
+console.log('[Firebase Config] Script loaded');
+console.log('[Firebase Config] Checking if Firebase SDK is available...');
+console.log('[Firebase Config] typeof firebase:', typeof firebase);
+
 if (typeof firebase !== 'undefined') {
-    initializeFirebase();
+    console.log('[Firebase Config] ✅ Firebase SDK found, initializing...');
+    const result = initializeFirebase();
+    if (result) {
+        console.log('[Firebase Config] ✅ Initialization successful!');
+    } else {
+        console.error('[Firebase Config] ❌ Initialization failed!');
+    }
 } else {
-    console.warn('[Firebase] SDK not loaded yet, will initialize on first use');
+    console.error('[Firebase Config] ❌ Firebase SDK not loaded! Check if CDN scripts are loading.');
+    console.error('[Firebase Config] Expected scripts: firebase-app-compat.js and firebase-database-compat.js');
 }
