@@ -89,6 +89,15 @@ function showDebugPanel(lineUserId, backendResponse) {
             <div class="debug-value">${JSON.stringify(backendResponse, null, 2)}</div>
         </div>
         <div class="debug-row">
+            <div class="debug-label">Firebase Status:</div>
+            <div class="debug-value">
+                USE_FIREBASE: ${USE_FIREBASE}<br>
+                typeof firebase: ${typeof firebase}<br>
+                isFirebaseReady(): ${typeof isFirebaseReady === 'function' ? isFirebaseReady() : 'function not found'}<br>
+                Will use: ${USE_FIREBASE && typeof firebase !== 'undefined' && typeof isFirebaseReady === 'function' && isFirebaseReady() ? 'Firebase' : 'Apps Script'}
+            </div>
+        </div>
+        <div class="debug-row">
             <div class="debug-label">Check Results:</div>
             <div class="debug-value">
                 mapping exists: ${!!backendResponse}<br>
