@@ -1,0 +1,61 @@
+/**
+ * Firebase Configuration for Cats N Cards Portal
+ * Fast backend for user mapping (LINE ID <-> TikTok username)
+ */
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyD1LsJ_NlxOFGpeSp6BeeUzFIhEMOsMVsY",
+    authDomain: "cats-n-cards-tcg.firebaseapp.com",
+    databaseURL: "https://cats-n-cards-tcg-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "cats-n-cards-tcg",
+    storageBucket: "cats-n-cards-tcg.firebasestorage.app",
+    messagingSenderId: "62209237814",
+    appId: "1:62209237814:web:08b5039c6b819781ebc997"
+};
+
+// Initialize Firebase
+let firebaseApp = null;
+let firebaseDatabase = null;
+
+/**
+ * Initialize Firebase (called automatically when script loads)
+ */
+function initializeFirebase() {
+    try {
+        if (typeof firebase === 'undefined') {
+            console.error('[Firebase] Firebase SDK not loaded yet');
+            return false;
+        }
+
+        // Initialize Firebase app
+        firebaseApp = firebase.initializeApp(firebaseConfig);
+        firebaseDatabase = firebase.database();
+
+        console.log('[Firebase] ✅ Initialized successfully');
+        console.log('[Firebase] Database URL:', firebaseConfig.databaseURL);
+        return true;
+    } catch (error) {
+        console.error('[Firebase] Initialization error:', error);
+        return false;
+    }
+}
+
+/**
+ * Get reference to Firebase database
+ * @returns {firebase.database.Database} Firebase database instance
+ */
+function getFirebaseDatabase() {
+    if (!firebaseDatabase) {
+        initializeFirebase();
+    }
+    return firebaseDatabase;
+}
+
+/**
+ * Check if Firebase is ready
+ * @returns {boolean} True if Firebase is initialized
+ */
+function isFirebaseReady() {
+    return firebaseDatabase !== null;
+}

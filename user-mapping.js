@@ -3,8 +3,10 @@
  * Handles LINE ID <-> TikTok Username mapping with Registration Gate
  */
 
-// Configuration - UPDATE THIS with your Google Apps Script URL
+// Configuration - Firebase is now the primary backend (fast!)
+// Old Google Apps Script URL kept as fallback
 const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbw1sCDdn_Z1TzOrN6rJCy_IZ-u7Va_CTg0AqMG226YhNDbEIW8wHzNyjv9RgU9ZAViH/exec';
+const USE_FIREBASE = true; // Set to false to fallback to Apps Script
 
 // Global state
 let userMapping = {
@@ -282,10 +284,37 @@ async function initializeUserMapping() {
  * @returns {Promise<Object>} Mapping result
  */
 async function checkUserMapping(lineUserId) {
+    if (USE_FIREBASE && typeof firebase !== 'undefined' && isFirebaseReady()) {
+        // Use Firebase (fast! <100ms)
+        try {
+            console.log('[UserMapping] Using Firebase for lookup');
+            const db = getFirebaseDatabase();
+            const snapshot = await db.ref(`userMappings/${lineUserId}`).once('value');
+
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                console.log('[UserMapping] Firebase found mapping:', data.tiktokUsername);
+                return {
+                    success: true,
+                    tiktokUsername: data.tiktokUsername,
+                    lineDisplayName: data.lineDisplayName,
+                    linePictureUrl: data.linePictureUrl
+                };
+            } else {
+                console.log('[UserMapping] Firebase: No mapping found');
+                return { success: false, message: 'No mapping found' };
+            }
+        } catch (error) {
+            console.error('[UserMapping] Firebase error:', error);
+            // Fall through to Apps Script fallback
+        }
+    }
+
+    // Fallback to Google Apps Script (slow, 3-10s)
     try {
+        console.log('[UserMapping] Using Apps Script fallback');
         const url = `${BACKEND_URL}?action=getUserMapping&lineUserId=${encodeURIComponent(lineUserId)}`;
 
-        // Add 10 second timeout - Google Apps Script can be slow
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -313,7 +342,33 @@ async function checkUserMapping(lineUserId) {
  * @returns {Promise<Object>} Save result
  */
 async function saveUserMapping(lineUserId, tiktokUsername, lineDisplayName, linePictureUrl) {
+    if (USE_FIREBASE && typeof firebase !== 'undefined' && isFirebaseReady()) {
+        // Use Firebase (fast! <100ms)
+        try {
+            console.log('[UserMapping] Saving to Firebase');
+            const db = getFirebaseDatabase();
+
+            const userData = {
+                tiktokUsername: tiktokUsername,
+                lineDisplayName: lineDisplayName,
+                linePictureUrl: linePictureUrl,
+                registeredAt: Date.now(),
+                lastUpdated: Date.now()
+            };
+
+            await db.ref(`userMappings/${lineUserId}`).set(userData);
+            console.log('[UserMapping] Firebase save successful');
+
+            return { success: true, message: 'Saved to Firebase' };
+        } catch (error) {
+            console.error('[UserMapping] Firebase save error:', error);
+            // Fall through to Apps Script fallback
+        }
+    }
+
+    // Fallback to Google Apps Script
     try {
+        console.log('[UserMapping] Using Apps Script fallback for save');
         const data = {
             action: 'saveUserMapping',
             lineUserId: lineUserId,
