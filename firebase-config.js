@@ -59,3 +59,10 @@ function getFirebaseDatabase() {
 function isFirebaseReady() {
     return firebaseDatabase !== null;
 }
+
+// Auto-initialize Firebase when script loads
+if (typeof firebase !== 'undefined') {
+    initializeFirebase();
+} else {
+    console.warn('[Firebase] SDK not loaded yet, will initialize on first use');
+}
