@@ -17,6 +17,8 @@ const firebaseConfig = {
 // Initialize Firebase
 let firebaseApp = null;
 let firebaseDatabase = null;
+let firebaseStorage = null;
+let firebaseFirestore = null;
 
 /**
  * Initialize Firebase (called automatically when script loads)
@@ -28,12 +30,29 @@ function initializeFirebase() {
             return false;
         }
 
-        // Initialize Firebase app
-        firebaseApp = firebase.initializeApp(firebaseConfig);
+        // Initialize Firebase app (only once)
+        if (!firebaseApp) {
+            firebaseApp = firebase.initializeApp(firebaseConfig);
+        }
+
+        // Initialize services
         firebaseDatabase = firebase.database();
+
+        // Initialize Storage if available
+        if (typeof firebase.storage === 'function') {
+            firebaseStorage = firebase.storage();
+            console.log('[Firebase] ✅ Storage initialized');
+        }
+
+        // Initialize Firestore if available
+        if (typeof firebase.firestore === 'function') {
+            firebaseFirestore = firebase.firestore();
+            console.log('[Firebase] ✅ Firestore initialized');
+        }
 
         console.log('[Firebase] ✅ Initialized successfully');
         console.log('[Firebase] Database URL:', firebaseConfig.databaseURL);
+        console.log('[Firebase] Storage Bucket:', firebaseConfig.storageBucket);
         return true;
     } catch (error) {
         console.error('[Firebase] Initialization error:', error);
@@ -53,11 +72,49 @@ function getFirebaseDatabase() {
 }
 
 /**
+ * Get reference to Firebase storage
+ * @returns {firebase.storage.Storage} Firebase storage instance
+ */
+function getFirebaseStorage() {
+    if (!firebaseStorage) {
+        initializeFirebase();
+    }
+    return firebaseStorage;
+}
+
+/**
+ * Get reference to Firestore
+ * @returns {firebase.firestore.Firestore} Firestore instance
+ */
+function getFirebaseFirestore() {
+    if (!firebaseFirestore) {
+        initializeFirebase();
+    }
+    return firebaseFirestore;
+}
+
+/**
  * Check if Firebase is ready
  * @returns {boolean} True if Firebase is initialized
  */
 function isFirebaseReady() {
     return firebaseDatabase !== null;
+}
+
+/**
+ * Check if Firebase Storage is ready
+ * @returns {boolean} True if Storage is initialized
+ */
+function isStorageReady() {
+    return firebaseStorage !== null;
+}
+
+/**
+ * Check if Firestore is ready
+ * @returns {boolean} True if Firestore is initialized
+ */
+function isFirestoreReady() {
+    return firebaseFirestore !== null;
 }
 
 // Auto-initialize Firebase when script loads (with retry for CDN loading)
