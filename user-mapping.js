@@ -293,29 +293,45 @@ async function initializeUserMapping() {
  * @returns {Promise<Object>} Mapping result
  */
 async function checkUserMapping(lineUserId) {
-    if (USE_FIREBASE && typeof firebase !== 'undefined' && isFirebaseReady()) {
-        // Use Firebase (fast! <100ms)
-        try {
-            console.log('[UserMapping] Using Firebase for lookup');
-            const db = getFirebaseDatabase();
-            const snapshot = await db.ref(`userMappings/${lineUserId}`).once('value');
+    // If Firebase is enabled, wait for it to initialize (up to 3 seconds)
+    if (USE_FIREBASE) {
+        console.log('[UserMapping] Firebase enabled, checking if ready...');
 
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                console.log('[UserMapping] Firebase found mapping:', data.tiktokUsername);
-                return {
-                    success: true,
-                    tiktokUsername: data.tiktokUsername,
-                    lineDisplayName: data.lineDisplayName,
-                    linePictureUrl: data.linePictureUrl
-                };
-            } else {
-                console.log('[UserMapping] Firebase: No mapping found');
-                return { success: false, message: 'No mapping found' };
+        // Poll for Firebase readiness (max 3 seconds)
+        for (let i = 0; i < 30; i++) {
+            if (typeof firebase !== 'undefined' && typeof isFirebaseReady === 'function' && isFirebaseReady()) {
+                console.log('[UserMapping] ✅ Firebase ready! Using Firebase for lookup');
+                break;
             }
-        } catch (error) {
-            console.error('[UserMapping] Firebase error:', error);
-            // Fall through to Apps Script fallback
+            console.log(`[UserMapping] Waiting for Firebase... (${i * 100}ms)`);
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        // Try Firebase if it's ready
+        if (typeof firebase !== 'undefined' && typeof isFirebaseReady === 'function' && isFirebaseReady()) {
+            try {
+                const db = getFirebaseDatabase();
+                const snapshot = await db.ref(`userMappings/${lineUserId}`).once('value');
+
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    console.log('[UserMapping] Firebase found mapping:', data.tiktokUsername);
+                    return {
+                        success: true,
+                        tiktokUsername: data.tiktokUsername,
+                        lineDisplayName: data.lineDisplayName,
+                        linePictureUrl: data.linePictureUrl
+                    };
+                } else {
+                    console.log('[UserMapping] Firebase: No mapping found');
+                    return { success: false, message: 'No mapping found' };
+                }
+            } catch (error) {
+                console.error('[UserMapping] Firebase error:', error);
+                // Fall through to Apps Script fallback
+            }
+        } else {
+            console.warn('[UserMapping] ⚠️ Firebase not ready after 3s, falling back to Apps Script');
         }
     }
 
