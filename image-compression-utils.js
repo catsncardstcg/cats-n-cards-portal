@@ -242,7 +242,7 @@ async function readFileAsBase64(file) {
  * @param {File} file - File object to process
  * @param {string} presetType - Type of preset ('receipt' or 'screenshot')
  * @param {Object} uiElements - UI element IDs { progressBar, statusText }
- * @returns {Promise<Object>} Result object { base64, stats: { originalSize, compressedSize, compressionRatio } }
+ * @returns {Promise<Object>} Result object { file, base64, stats: { originalSize, compressedSize, compressionRatio } }
  */
 async function processImageForUpload(file, presetType, uiElements = {}) {
     const { progressBar, statusText } = uiElements;
@@ -303,7 +303,8 @@ async function processImageForUpload(file, presetType, uiElements = {}) {
         console.log('[ImageCompression] Processing complete');
 
         return {
-            base64: base64,
+            file: finalFile,  // Return compressed file object for Firebase Storage
+            base64: base64,   // Keep base64 for backward compatibility
             stats: {
                 originalSize: originalSize,
                 compressedSize: compressedSize,

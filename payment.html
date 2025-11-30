@@ -532,13 +532,13 @@
             progressDiv.style.display = 'block';
 
             try {
-                let base64Data, mimeType;
+                let fileToUpload = selectedReceipt;
 
                 // Use compression if enabled and available
                 if (ENABLE_IMAGE_COMPRESSION && typeof processImageForUpload === 'function') {
                     console.log('[Payment] Using image compression');
 
-                    // Process image: validate → compress → Base64
+                    // Process image: validate → compress → get File object
                     const result = await processImageForUpload(
                         selectedReceipt,
                         'receipt',
@@ -548,52 +548,38 @@
                         }
                     );
 
-                    base64Data = result.base64;
-                    mimeType = 'image/jpeg'; // Always JPEG after compression
+                    fileToUpload = result.file; // Use compressed file
 
                     console.log('[Payment] Compression stats:', result.stats);
                 } else {
-                    console.log('[Payment] Using original upload (no compression)');
-
-                    // Fallback: original FileReader method
+                    console.log('[Payment] Using original file (no compression)');
                     updateProgressBar('progress-fill', 50);
                     updateStatusText('progress-text', 'Processing image... / กำลังประมวลผลรูปภาพ...');
-
-                    base64Data = await new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => resolve(e.target.result.split(',')[1]);
-                        reader.onerror = () => reject(new Error('Failed to read file'));
-                        reader.readAsDataURL(selectedReceipt);
-                    });
-
-                    mimeType = selectedReceipt.type;
                 }
 
                 // Show upload status
-                updateProgressBar('progress-fill', 90);
-                updateStatusText('progress-text', 'Uploading to server... / กำลังส่งข้อมูล...');
+                updateProgressBar('progress-fill', 60);
+                updateStatusText('progress-text', 'Uploading to Firebase... / กำลังอัปโหลด...');
 
-                // Prepare data payload
-                const data = {
-                    action: 'submitPayment',
-                    tiktokUsername: username,
-                    amount: amount,
-                    pointsEarned: Math.floor(amount / POINTS_PER_THB),
-                    receiptFileName: selectedReceipt.name,
-                    receiptData: base64Data,
-                    receiptMimeType: mimeType,
-                    lineUserId: lineUserId || null,
-                    lineDisplayName: getLINEDisplayName() || null,
-                    linePictureUrl: getLINEPictureUrl() || null
-                };
-
-                // Submit to backend
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(data)
-                });
-
-                const result = await response.json();
+                // Upload to Firebase Storage
+                const result = await uploadReceiptToFirebase(
+                    fileToUpload,
+                    username,
+                    'payment',
+                    {
+                        amount: amount,
+                        pointsEarned: Math.floor(amount / POINTS_PER_THB),
+                        lineUserId: lineUserId || null,
+                        lineDisplayName: getLINEDisplayName() || null,
+                        linePictureUrl: getLINEPictureUrl() || null,
+                        preset: selectedPreset || 'receipt'
+                    },
+                    (progress) => {
+                        // Progress callback
+                        const adjustedProgress = 60 + (progress * 0.4); // 60-100%
+                        updateProgressBar('progress-fill', adjustedProgress);
+                    }
+                );
 
                 if (result.success) {
                     // Show success
