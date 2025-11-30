@@ -564,9 +564,19 @@
 
     <!-- Diagnostic: Check if Firebase loaded -->
     <script defer>
+        console.log('[DIAGNOSTIC] Inline diagnostic script is running!');
         window.addEventListener('DOMContentLoaded', function() {
+            console.log('[DIAGNOSTIC] DOMContentLoaded fired');
             setTimeout(function() {
                 console.log('[DIAGNOSTIC] typeof firebase after 1s:', typeof firebase);
+
+                // Create visible diagnostic message
+                var diag = document.createElement('div');
+                diag.style.cssText = 'position:fixed;top:0;left:0;right:0;background:black;color:white;padding:10px;z-index:999999;font-size:12px;';
+                diag.innerHTML = '<b>FIREBASE DIAGNOSTIC:</b><br>typeof firebase: ' + typeof firebase +
+                    (typeof firebase === 'undefined' ? '<br>❌ CDN BLOCKED OR FAILED!' : '<br>✅ SDK LOADED!');
+                document.body.insertBefore(diag, document.body.firstChild);
+
                 if (typeof firebase === 'undefined') {
                     console.error('[DIAGNOSTIC] ⚠️ Firebase SDK failed to load from CDN!');
                     console.error('[DIAGNOSTIC] This might be blocked by LINE browser or network.');
