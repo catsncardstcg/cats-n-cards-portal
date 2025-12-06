@@ -140,6 +140,9 @@ async function uploadReceiptToFirebase(imageFile, tiktokUsername, uploadType, me
     } catch (error) {
         console.error('[Receipt Upload] Firebase upload failed:', error);
 
+        // Show user-friendly error
+        alert(`Firebase Storage upload failed: ${error.message}\n\nFalling back to Google Apps Script...`);
+
         // Fallback to Apps Script if enabled
         if (FALLBACK_TO_APPS_SCRIPT) {
             console.log('[Receipt Upload] Falling back to Google Apps Script...');
