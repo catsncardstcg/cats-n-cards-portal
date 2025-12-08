@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Login - Cats N Cards TCG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            animation: fadeIn 0.6s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .password-input {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #666;
+            font-size: 1.2em;
+            user-select: none;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .login-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            color: #f44336;
+            margin-top: 15px;
+            padding: 10px;
+            background: #ffebee;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .success-message {
+            color: #4caf50;
+            margin-top: 15px;
+            padding: 10px;
+            background: #e8f5e8;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .remember-me input {
+            width: auto;
+            margin-right: 8px;
+        }
+
+        .remember-me label {
+            margin-bottom: 0;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .access-code-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .access-code-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .access-code-input input {
+            flex: 1;
+        }
+
+        .code-digit {
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .loading {
+            display: none;
+            margin-left: 10px;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            input {
+                padding: 12px;
+            }
+
+            .code-digit {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">🎮</div>
+        <h1>Stream Dashboard</h1>
+        <p class="subtitle">Authentication required</p>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required placeholder="Enter your email">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <div class="password-input">
+                    <input type="password" id="password" name="password" required placeholder="Enter your password">
+                    <span class="toggle-password" onclick="togglePasswordVisibility()">👁️</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="accessCode">Access Code:</label>
+                <input type="password" id="accessCode" name="accessCode" required placeholder="Enter your access code">
+            </div>
+
+            <div class="remember-me">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember">Remember me for 7 days</label>
+            </div>
+
+            <button type="submit" class="login-button">
+                <span id="buttonText">Login to Dashboard</span>
+                <span class="loading">⏳</span>
+            </button>
+
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <div class="access-code-section">
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 10px;">
+                    Don't have access? Contact the administrator for credentials.
+                </p>
+            </div>
+        </form>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Access codes (these would be better stored in a secure database)
+        const ACCESS_CODES = {
+            'STREAMER2024': 'streamer',
+            'ADMIN123': 'admin',
+            'CATSDASH': 'viewer'
+        };
+
+        // Check if already authenticated
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                // User is authenticated, check access code
+                const accessCodeVerified = localStorage.getItem('access_code_verified');
+                const accessCodeExpiry = localStorage.getItem('access_code_expiry');
+
+                if (accessCodeVerified && accessCodeExpiry && new Date().getTime() < parseInt(accessCodeExpiry)) {
+                    // Valid session exists
+                    window.location.href = 'dashboard.html';
+                } else {
+                    // Need to verify access code again
+                    console.log('User authenticated but access code expired');
+                }
+            }
+        });
+
+        // Handle login form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const accessCode = document.getElementById('accessCode').value.toUpperCase();
+            const remember = document.getElementById('remember').checked;
+
+            // Validate access code first
+            if (!ACCESS_CODES[accessCode]) {
+                showMessage('Invalid access code', 'error');
+                return;
+            }
+
+            // Show loading state
+            setLoading(true);
+
+            try {
+                // Authenticate with Firebase
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+
+                // Check if user is authorized (you would have a list of authorized emails)
+                const authorizedEmails = ['streamer@catsncards.com', 'admin@catsncards.com']; // Add your authorized emails
+
+                // For development, allow any email. For production, check against authorizedEmails
+                // if (!authorizedEmails.includes(email)) {
+                //     await auth.signOut();
+                //     showMessage('This email is not authorized to access the dashboard', 'error');
+                //     setLoading(false);
+                //     return;
+                // }
+
+                // Store access code verification
+                const expiry = remember ?
+                    new Date().getTime() + (7 * 24 * 60 * 60 * 1000) : // 7 days
+                    new Date().getTime() + (2 * 60 * 60 * 1000);  // 2 hours
+
+                localStorage.setItem('access_code_verified', ACCESS_CODES[accessCode]);
+                localStorage.setItem('access_code_expiry', expiry.toString());
+                localStorage.setItem('user_email', email);
+                localStorage.setItem('user_role', ACCESS_CODES[accessCode]);
+
+                showMessage('Login successful! Redirecting...', 'success');
+
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+
+            } catch (error) {
+                console.error('Login error:', error);
+
+                let errorMessage = 'Login failed';
+                switch (error.code) {
+                    case 'auth/user-not-found':
+                        errorMessage = 'User not found';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage = 'Incorrect password';
+                        break;
+                    case 'auth/too-many-requests':
+                        errorMessage = 'Too many login attempts. Please try again later';
+                        break;
+                    default:
+                        errorMessage = error.message;
+                }
+
+                showMessage(errorMessage, 'error');
+            }
+
+            setLoading(false);
+        });
+
+        function setLoading(loading) {
+            const button = document.querySelector('.login-button');
+            const buttonText = document.getElementById('buttonText');
+            const loadingSpinner = document.querySelector('.loading');
+
+            if (loading) {
+                button.disabled = true;
+                buttonText.style.display = 'none';
+                loadingSpinner.style.display = 'inline-block';
+            } else {
+                button.disabled = false;
+                buttonText.style.display = 'inline';
+                loadingSpinner.style.display = 'none';
+            }
+        }
+
+        function showMessage(message, type) {
+            const errorElement = document.getElementById('errorMessage');
+            const successElement = document.getElementById('successMessage');
+
+            // Hide both messages first
+            errorElement.style.display = 'none';
+            successElement.style.display = 'none';
+
+            if (type === 'error') {
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+            } else {
+                successElement.textContent = message;
+                successElement.style.display = 'block';
+            }
+        }
+
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.querySelector('.toggle-password');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.textContent = '👁️';
+            }
+        }
+
+        // Check URL for access code parameter
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+
+            if (code) {
+                document.getElementById('accessCode').value = code.toUpperCase();
+            }
+        });
+    </script>
+</body>
+</html>

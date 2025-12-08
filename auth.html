@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Login - Cats N Cards TCG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            animation: fadeIn 0.6s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .password-input {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #666;
+            font-size: 1.2em;
+            user-select: none;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .login-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            color: #f44336;
+            margin-top: 15px;
+            padding: 10px;
+            background: #ffebee;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .success-message {
+            color: #4caf50;
+            margin-top: 15px;
+            padding: 10px;
+            background: #e8f5e8;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .remember-me input {
+            width: auto;
+            margin-right: 8px;
+        }
+
+        .remember-me label {
+            margin-bottom: 0;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .forgot-link {
+            display: block;
+            margin-top: 15px;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+
+        .forgot-link:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            display: none;
+            margin-left: 10px;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            input {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">🎮</div>
+        <h1>Stream Dashboard</h1>
+        <p class="subtitle">Authentication required</p>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required placeholder="Enter your username">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password/PIN:</label>
+                <div class="password-input">
+                    <input type="password" id="password" name="password" required placeholder="Enter your password or PIN">
+                    <span class="toggle-password" onclick="togglePasswordVisibility()">👁️</span>
+                </div>
+            </div>
+
+            <div class="remember-me">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember">Remember me for 24 hours</label>
+            </div>
+
+            <button type="submit" class="login-button">
+                <span id="buttonText">Login to Dashboard</span>
+                <span class="loading">⏳</span>
+            </button>
+
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <a href="#" class="forgot-link" onclick="showForgotHint()">Forgot password?</a>
+                <a href="#" class="forgot-link" onclick="resetCredentials()">Reset credentials</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Simple authentication system with local storage
+        const AUTH_KEY = 'dashboard_auth_token';
+        const AUTH_EXPIRY = 'dashboard_auth_expiry';
+
+        // Get credentials from environment variables or use prompt for first-time setup
+        let VALID_CREDENTIALS = {};
+
+        // Check if this is first time setup
+        if (!localStorage.getItem('dashboard_credentials_set')) {
+            // Prompt for credentials on first load
+            const username = prompt('Set up your dashboard username:');
+            const password = prompt('Set your dashboard password:');
+
+            if (username && password) {
+                // Store encrypted credentials
+                const encrypted = btoa(`${username}:${password}:${Date.now()}`);
+                localStorage.setItem('dashboard_credentials', encrypted);
+                localStorage.setItem('dashboard_credentials_set', 'true');
+                VALID_CREDENTIALS = { [username]: password };
+            } else {
+                alert('Dashboard setup cancelled. Refresh to try again.');
+                window.location.href = 'index.html';
+                return;
+            }
+        } else {
+            // Load existing credentials
+            try {
+                const encrypted = localStorage.getItem('dashboard_credentials');
+                const decoded = atob(encrypted);
+                const parts = decoded.split(':');
+                if (parts.length >= 2) {
+                    VALID_CREDENTIALS = { [parts[0]]: parts[1] };
+                }
+            } catch (e) {
+                alert('Invalid credentials stored. Please clear browser data and refresh.');
+                window.location.href = 'index.html';
+                return;
+            }
+        }
+
+        // Check if already authenticated
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem(AUTH_KEY);
+            const expiry = localStorage.getItem(AUTH_EXPIRY);
+
+            if (token && expiry && new Date().getTime() < parseInt(expiry)) {
+                // Valid session exists
+                redirectToDashboard();
+            } else {
+                // Clear expired session
+                localStorage.removeItem(AUTH_KEY);
+                localStorage.removeItem(AUTH_EXPIRY);
+            }
+        });
+
+        // Handle login form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+
+            // Show loading state
+            setLoading(true);
+
+            // Simulate authentication delay
+            setTimeout(() => {
+                if (authenticateUser(username, password)) {
+                    // Authentication successful
+                    const expiry = remember ?
+                        new Date().getTime() + (24 * 60 * 60 * 1000) : // 24 hours
+                        new Date().getTime() + (2 * 60 * 60 * 1000);  // 2 hours
+
+                    localStorage.setItem(AUTH_KEY, generateToken(username));
+                    localStorage.setItem(AUTH_EXPIRY, expiry.toString());
+
+                    showMessage('Login successful! Redirecting...', 'success');
+
+                    setTimeout(() => {
+                        redirectToDashboard();
+                    }, 1000);
+                } else {
+                    // Authentication failed
+                    showMessage('Invalid username or password', 'error');
+                }
+
+                setLoading(false);
+            }, 800);
+        });
+
+        function authenticateUser(username, password) {
+            // Check against valid credentials
+            return VALID_CREDENTIALS[username] === password;
+        }
+
+        function generateToken(username) {
+            // Simple token generation (in production, use more secure method)
+            return btoa(`${username}:${Date.now()}:${Math.random()}`);
+        }
+
+        function redirectToDashboard() {
+            window.location.href = 'dashboard.html';
+        }
+
+        function setLoading(loading) {
+            const button = document.querySelector('.login-button');
+            const buttonText = document.getElementById('buttonText');
+            const loadingSpinner = document.querySelector('.loading');
+
+            if (loading) {
+                button.disabled = true;
+                buttonText.style.display = 'none';
+                loadingSpinner.style.display = 'inline-block';
+            } else {
+                button.disabled = false;
+                buttonText.style.display = 'inline';
+                loadingSpinner.style.display = 'none';
+            }
+        }
+
+        function showMessage(message, type) {
+            const errorElement = document.getElementById('errorMessage');
+            const successElement = document.getElementById('successMessage');
+
+            // Hide both messages first
+            errorElement.style.display = 'none';
+            successElement.style.display = 'none';
+
+            if (type === 'error') {
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+            } else {
+                successElement.textContent = message;
+                successElement.style.display = 'block';
+            }
+        }
+
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.querySelector('.toggle-password');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.textContent = '👁️';
+            }
+        }
+
+        function showForgotHint() {
+            showMessage('Your credentials are stored in your browser. Try resetting them if you forgot.', 'error');
+            return false;
+        }
+
+        function resetCredentials() {
+            if (confirm('This will reset all stored credentials. You will need to set up new credentials afterwards. Continue?')) {
+                localStorage.removeItem('dashboard_credentials');
+                localStorage.removeItem('dashboard_credentials_set');
+                localStorage.removeItem(AUTH_KEY);
+                localStorage.removeItem(AUTH_EXPIRY);
+                showMessage('Credentials reset! Please refresh the page to set up new credentials.', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
+            return false;
+        }
+
+        // Prevent back button from accessing dashboard after logout
+        window.addEventListener('popstate', () => {
+            checkAuthStatus();
+        });
+
+        function checkAuthStatus() {
+            const token = localStorage.getItem(AUTH_KEY);
+            const expiry = localStorage.getItem(AUTH_EXPIRY);
+
+            if (!token || !expiry || new Date().getTime() > parseInt(expiry)) {
+                // Not authenticated, redirect to login
+                if (window.location.pathname.includes('dashboard.html')) {
+                    window.location.href = 'auth.html';
+                }
+            }
+        }
+
+        // Check auth status periodically
+        setInterval(checkAuthStatus, 30000); // Check every 30 seconds
+    </script>
+</body>
+</html>
