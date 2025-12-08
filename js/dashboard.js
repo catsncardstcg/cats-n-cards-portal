@@ -9,6 +9,9 @@ let transactions = [];
 let currentFilter = 'all';
 let searchQuery = '';
 let unsubscribe;
+let paymentMethods = []; // Store payment methods for streamer name verification
+let viewMode = 'cards'; // 'cards' | 'table'
+let sortConfig = { field: 'uploadedAt', direction: 'desc' };
 
 // Initialize dashboard when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
@@ -37,6 +40,54 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
+ * Get expected streamer name from payment methods
+ * @returns {string} Streamer's account name from active payment methods
+ */
+function getExpectedStreamerName() {
+    // Try to get streamer name from active payment methods
+    if (paymentMethods.length > 0) {
+        const activeMethods = paymentMethods.filter(method => method.isActive);
+        if (activeMethods.length > 0) {
+            // Use the account name from the first active payment method
+            return activeMethods[0].accountName || '';
+        }
+    }
+
+    // Fallback to empty string if no payment methods available
+    return '';
+}
+
+/**
+ * Load payment methods for streamer name verification
+ */
+async function loadPaymentMethodsForVerification() {
+    try {
+        if (!db) return;
+
+        console.log('[Dashboard] Loading payment methods for streamer verification...');
+
+        const snapshot = await db.collection('paymentMethods')
+            .where('isActive', '==', true)
+            .orderBy('displayOrder', 'asc')
+            .limit(1) // Only need one for verification
+            .get();
+
+        paymentMethods = [];
+        snapshot.forEach(doc => {
+            paymentMethods.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
+
+        console.log(`[Dashboard] Loaded ${paymentMethods.length} active payment methods for verification`);
+
+    } catch (error) {
+        console.error('[Dashboard] Error loading payment methods for verification:', error);
+    }
+}
+
+/**
  * Initialize the dashboard
  */
 function initializeDashboard() {
@@ -55,6 +106,9 @@ function initializeDashboard() {
 
     // Setup event listeners
     setupEventListeners();
+
+    // Load payment methods for streamer name verification
+    loadPaymentMethodsForVerification();
 
     // Start real-time transaction monitoring
     startRealtimeMonitoring();
@@ -225,77 +279,87 @@ function updateStatistics() {
  * Update transaction display based on current filter and search
  */
 function updateTransactionDisplay() {
-    const container = document.getElementById('transactionsContainer');
-    if (!container) return;
+    // Update card view
+    const cardContainer = document.getElementById('transactionsContainer');
+    if (cardContainer) {
+        const filteredTransactions = getFilteredTransactions();
 
-    // Filter transactions
-    let filteredTransactions = transactions.filter(transaction => {
-        // Status filter
-        if (currentFilter !== 'all' && transaction.status !== currentFilter) {
-            return false;
+        // Clear loading spinner
+        cardContainer.innerHTML = '';
+
+        if (filteredTransactions.length === 0) {
+            showEmptyState(cardContainer);
+        } else {
+            // Render transactions as cards
+            filteredTransactions.forEach(transaction => {
+                const transactionCard = createTransactionCard(transaction);
+                cardContainer.appendChild(transactionCard);
+            });
         }
-
-        // Search filter
-        if (searchQuery) {
-            const username = transaction.tikTokUsername?.toLowerCase() || '';
-            const displayName = transaction.lineDisplayName?.toLowerCase() || '';
-            return username.includes(searchQuery) || displayName.includes(searchQuery);
-        }
-
-        return true;
-    });
-
-    // Clear loading spinner
-    container.innerHTML = '';
-
-    if (filteredTransactions.length === 0) {
-        showEmptyState(container);
-        return;
     }
 
-    // Render transactions
-    filteredTransactions.forEach(transaction => {
-        const transactionCard = createTransactionCard(transaction);
-        container.appendChild(transactionCard);
-    });
+    // Update table view if active
+    if (viewMode === 'table') {
+        generateTransactionTable();
+    }
 
-    console.log(`[Dashboard] Displayed ${filteredTransactions.length} transactions`);
+    const filteredTransactions = getFilteredTransactions();
+    console.log(`[Dashboard] Displayed ${filteredTransactions.length} transactions in ${viewMode} view`);
 }
 
 /**
- * Get verification badge HTML for transaction
+ * Get verification badge data for transaction
+ * @param {Object} transaction - Transaction data
+ * @param {boolean} returnHTML - Return HTML string for card view (default: true)
+ * @returns {string|Object} HTML string for cards or object with data for tables
  */
-function getVerificationBadge(transaction) {
+function getVerificationBadge(transaction, returnHTML = true) {
     // Check if Thunder API data is available
-    if (!transaction.thunderResult || !transaction.thunderResult.sender || !transaction.thunderResult.sender.account) {
-        return `<span class="verification-badge no-data">⚠️ No Data</span>`;
+    if (!transaction.thunderResult || !transaction.thunderResult.receiver || !transaction.thunderResult.receiver.account) {
+        const data = {
+            icon: '⚠️',
+            text: 'No Data',
+            class: 'no-data'
+        };
+        return returnHTML ? `<span class="verification-badge ${data.class}">${data.icon} ${data.text}</span>` : data;
     }
 
-    // Extract sender name from Thunder API
-    const thunderSenderName = transaction.thunderResult.sender.account.name.th ||
-                              transaction.thunderResult.sender.account.name.en ||
-                              '';
+    // Extract RECEIVER name from Thunder API (streamer who received money)
+    const thunderReceiverName = transaction.thunderResult.receiver.account.name.th ||
+                               transaction.thunderResult.receiver.account.name.en ||
+                               '';
 
-    // Get expected recipient (LINE display name)
-    const expectedRecipient = transaction.lineDisplayName || '';
+    // Get expected recipient (streamer's name from payment methods)
+    const expectedRecipient = getExpectedStreamerName();
 
-    // If no sender name or no expected recipient, show warning
-    if (!thunderSenderName || !expectedRecipient) {
-        return `<span class="verification-badge no-data">⚠️ No Data</span>`;
+    // If no receiver name or no expected recipient, show warning
+    if (!thunderReceiverName || !expectedRecipient) {
+        const data = {
+            icon: '⚠️',
+            text: 'No Data',
+            class: 'no-data'
+        };
+        return returnHTML ? `<span class="verification-badge ${data.class}">${data.icon} ${data.text}</span>` : data;
     }
 
     // Compare names (case-insensitive, partial matching)
-    const senderName = thunderSenderName.toLowerCase().trim();
+    const receiverName = thunderReceiverName.toLowerCase().trim();
     const expected = expectedRecipient.toLowerCase().trim();
 
-    // Check for partial match (sender name contains expected or vice versa)
-    const isMatch = senderName.includes(expected) || expected.includes(senderName);
+    // Check for partial match (receiver name contains expected or vice versa)
+    const isMatch = receiverName.includes(expected) || expected.includes(receiverName);
 
-    if (isMatch) {
-        return `<span class="verification-badge match">✅ Match</span>`;
-    } else {
-        return `<span class="verification-badge mismatch">❌ Mismatch</span>`;
-    }
+    const data = isMatch ? {
+        icon: '✅',
+        text: 'Verified',
+        class: 'verified'
+    } : {
+        icon: '❌',
+        text: 'Suspicious',
+        class: 'unverified'
+    };
+
+    return returnHTML ? `<span class="verification-badge ${data.class}">${data.icon} ${data.text}</span>` : data;
 }
 
 /**
@@ -311,15 +375,14 @@ function createTransactionCard(transaction) {
     const timeAgo = uploadTime ? getTimeAgo(uploadTime) : 'Unknown';
     const amount = transaction.amount ? `฿${transaction.amount.toLocaleString()}` : 'N/A';
 
-    // Get user initials for avatar
+    // Get TikTok username - check multiple possible field names
     const tiktokUsername = transaction.tikTokUsername || transaction.tiktok_username || transaction.TikTokUsername || '';
+
+    // Get user initials for avatar
     const initials = getUserInitials(transaction.lineDisplayName || tiktokUsername);
 
     // Get verification badge
     const verificationBadge = getVerificationBadge(transaction);
-
-    // Get TikTok username - check multiple possible field names
-    const tiktokUsername = transaction.tikTokUsername || transaction.tiktok_username || transaction.TikTokUsername || '';
 
     // Debug: Log username fields for this transaction
     if (transaction.id) {
@@ -641,51 +704,51 @@ function showTransactionDetailsModal(transactionId) {
     document.getElementById('detailFileName').textContent = transaction.fileName || 'N/A';
     document.getElementById('detailFileSize').textContent = formatFileSize(transaction.fileSize || 0);
 
-    // Set expected recipient (LINE display name)
-    document.getElementById('expectedRecipient').textContent = transaction.lineDisplayName || 'N/A';
+    // Set expected recipient (streamer's name from payment methods)
+    const expectedStreamerName = getExpectedStreamerName();
+    document.getElementById('expectedRecipient').textContent = expectedStreamerName || 'Not configured';
 
     // Process Thunder API data
     if (transaction.thunderResult) {
         const formattedData = formatThunderApiResponse(transaction.thunderResult);
         document.getElementById('thunderDataContent').textContent = formattedData.formattedText;
 
-        // Extract and display sender name
-        if (formattedData.senderName) {
-            document.getElementById('senderName').textContent = formattedData.senderName;
+        // Extract and display RECEIVER name (streamer who received money)
+        if (formattedData.receiverName) {
+            document.getElementById('senderName').textContent = formattedData.receiverName;
 
-            // Check verification status
-            const expectedRecipient = transaction.lineDisplayName;
-            const senderName = formattedData.senderName.toLowerCase().trim();
-            const expected = expectedRecipient.toLowerCase().trim();
+            // Check verification status - compare receiver name with expected streamer name
+            const receiverName = formattedData.receiverName.toLowerCase().trim();
+            const expected = expectedStreamerName.toLowerCase().trim();
 
-            if (senderName && expected) {
+            if (receiverName && expected) {
                 const verificationIcon = document.getElementById('verificationIcon');
                 const verificationStatus = document.getElementById('verificationStatus');
-                const senderNameElement = document.getElementById('senderName');
+                const receiverNameElement = document.getElementById('senderName');
 
-                if (senderName.includes(expected) || expected.includes(senderName)) {
+                if (receiverName.includes(expected) || expected.includes(receiverName)) {
                     verificationIcon.textContent = '✅';
                     verificationIcon.className = 'verification-icon verification-success';
-                    verificationStatus.textContent = 'Sender name matches expected recipient';
+                    verificationStatus.textContent = '✅ Payment received by correct streamer';
                     verificationStatus.style.color = '#28a745';
-                    senderNameElement.style.borderColor = '#28a745';
+                    receiverNameElement.style.borderColor = '#28a745';
                 } else {
                     verificationIcon.textContent = '❌';
                     verificationIcon.className = 'verification-icon verification-error';
-                    verificationStatus.textContent = 'Warning: Sender name does not match expected recipient';
+                    verificationStatus.textContent = '❌ Warning: Payment not received by expected streamer';
                     verificationStatus.style.color = '#dc3545';
-                    senderNameElement.style.borderColor = '#dc3545';
+                    receiverNameElement.style.borderColor = '#dc3545';
                 }
             } else {
                 document.getElementById('verificationIcon').textContent = '⚠️';
                 document.getElementById('verificationIcon').className = 'verification-icon verification-warning';
-                document.getElementById('verificationStatus').textContent = 'Unable to verify sender information';
+                document.getElementById('verificationStatus').textContent = 'Unable to verify recipient information';
             }
         } else {
             document.getElementById('senderName').textContent = 'Not available';
-            document.getElementById('verificationIcon').textContent = '⚠️';
-            document.getElementById('verificationIcon').className = 'verification-icon verification-warning';
-            document.getElementById('verificationStatus').textContent = 'Sender information not available';
+            document.getElementById('verificationIcon').textContent = '❌';
+            document.getElementById('verificationIcon').className = 'verification-icon verification-error';
+            document.getElementById('verificationStatus').textContent = 'No receiver data available from Thunder API';
         }
     } else {
         document.getElementById('senderName').textContent = 'No API data';
@@ -712,6 +775,13 @@ function formatThunderApiResponse(thunderData) {
 
         if (thunderData.sender && thunderData.sender.account && thunderData.sender.account.name) {
             senderName = thunderData.sender.account.name.th || thunderData.sender.account.name.en || null;
+        }
+
+        // Extract receiver name from nested structure
+        let receiverName = null;
+
+        if (thunderData.receiver && thunderData.receiver.account && thunderData.receiver.account.name) {
+            receiverName = thunderData.receiver.account.name.th || thunderData.receiver.account.name.en || null;
         }
 
         // Build formatted text
@@ -765,6 +835,7 @@ function formatThunderApiResponse(thunderData) {
 
         return {
             senderName: senderName,
+            receiverName: receiverName,
             formattedText: formattedText
         };
 
@@ -772,6 +843,7 @@ function formatThunderApiResponse(thunderData) {
         console.error('Error formatting Thunder API response:', error);
         return {
             senderName: null,
+            receiverName: null,
             formattedText: 'Error formatting API response:\n' + JSON.stringify(thunderData, null, 2)
         };
     }
@@ -1384,6 +1456,595 @@ function viewPaymentMethod(id) {
 
     // Open QR code in a modal or new window
     window.open(method.imageUrl, '_blank');
+}
+
+/**
+ * Toggle between card view and table view
+ * @param {string} mode - View mode ('cards' or 'table')
+ */
+function toggleViewMode(mode) {
+    if (viewMode === mode) return; // Already in this mode
+
+    viewMode = mode;
+
+    // Update UI buttons
+    const cardBtn = document.getElementById('cardViewBtn');
+    const tableBtn = document.getElementById('tableViewBtn');
+    const cardContainer = document.getElementById('transactionsContainer');
+    const tableContainer = document.getElementById('tableViewContainer');
+
+    if (mode === 'cards') {
+        cardBtn.classList.add('active');
+        tableBtn.classList.remove('active');
+        cardContainer.style.display = 'block';
+        tableContainer.style.display = 'none';
+    } else {
+        cardBtn.classList.remove('active');
+        tableBtn.classList.add('active');
+        cardContainer.style.display = 'none';
+        tableContainer.style.display = 'block';
+
+        // Generate table if needed
+        generateTransactionTable();
+    }
+
+    console.log(`[Dashboard] Switched to ${mode} view`);
+}
+
+/**
+ * Generate transaction table HTML
+ */
+function generateTransactionTable() {
+    const tbody = document.getElementById('transactionsTableBody');
+    if (!tbody) return;
+
+    const filteredTransactions = getFilteredTransactions();
+    const sortedTransactions = sortTransactions(filteredTransactions);
+
+    if (sortedTransactions.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px; color: #666;">
+                    <i class="fas fa-inbox" style="font-size: 2em; margin-bottom: 10px; display: block;"></i>
+                    No transactions found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = sortedTransactions.map(transaction => createTransactionTableRow(transaction)).join('');
+
+    // Add sort event listeners
+    document.querySelectorAll('.transactions-table th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+            const field = th.dataset.sort;
+            if (sortConfig.field === field) {
+                sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortConfig.field = field;
+                sortConfig.direction = 'desc';
+            }
+            updateSortIndicators();
+            generateTransactionTable();
+        });
+    });
+}
+
+/**
+ * Create a table row for a transaction
+ * @param {Object} transaction - Transaction data
+ * @returns {string} HTML table row
+ */
+function createTransactionTableRow(transaction) {
+    const verification = getVerificationBadge(transaction);
+    const formattedDate = new Date(transaction.uploadedAt).toLocaleString('th-TH', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    const customerInfo = getCustomerInfo(transaction);
+    const amount = (transaction.thunderResult?.amount?.amount || transaction.amount || 0).toLocaleString('en-US');
+    const status = transaction.verificationStatus || 'pending';
+
+    return `
+        <tr>
+            <td>
+                <div class="table-date">${formattedDate}</div>
+            </td>
+            <td>
+                <div class="table-customer">
+                    ${customerInfo.lineDisplayName}
+                    ${customerInfo.tiktokUsername ? `<div class="tiktok">${customerInfo.tiktokUsername}</div>` : ''}
+                </div>
+            </td>
+            <td>
+                <div class="table-amount">฿${amount}</div>
+            </td>
+            <td>
+                <span class="table-status ${status}">${status}</span>
+            </td>
+            <td>
+                <div class="table-verification ${verification.class}">
+                    ${verification.icon} ${verification.text}
+                </div>
+            </td>
+            <td>
+                <div class="table-actions">
+                    <button class="btn-primary" onclick="showTransactionDetailsModal('${transaction.id}')" title="View Details">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn-info" onclick="showImageGalleryModal('${transaction.id}')" title="View Receipts">
+                        <i class="fas fa-image"></i>
+                    </button>
+                    <button class="btn-warning" onclick="openEditModal('${transaction.id}')" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-success" onclick="retryVerification('${transaction.id}')" title="Retry Verification">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+/**
+ * Sort transactions based on current sort configuration
+ * @param {Array} transactionsToSort - Transactions to sort
+ * @returns {Array} Sorted transactions
+ */
+function sortTransactions(transactionsToSort) {
+    return [...transactionsToSort].sort((a, b) => {
+        let aValue, bValue;
+
+        switch (sortConfig.field) {
+            case 'uploadedAt':
+                aValue = new Date(a.uploadedAt);
+                bValue = new Date(b.uploadedAt);
+                break;
+            case 'lineDisplayName':
+                aValue = getCustomerInfo(a).lineDisplayName.toLowerCase();
+                bValue = getCustomerInfo(b).lineDisplayName.toLowerCase();
+                break;
+            case 'amount':
+                aValue = a.thunderResult?.amount?.amount || a.amount || 0;
+                bValue = b.thunderResult?.amount?.amount || b.amount || 0;
+                break;
+            default:
+                return 0;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+}
+
+/**
+ * Update sort indicators in table headers
+ */
+function updateSortIndicators() {
+    document.querySelectorAll('.transactions-table th.sortable').forEach(th => {
+        const field = th.dataset.sort;
+        const icon = th.querySelector('i');
+
+        if (sortConfig.field === field) {
+            th.dataset.sortDirection = sortConfig.direction;
+            icon.className = `fas fa-sort-${sortConfig.direction === 'asc' ? 'up' : 'down'}`;
+        } else {
+            delete th.dataset.sortDirection;
+            icon.className = 'fas fa-sort';
+        }
+    });
+}
+
+/**
+ * Get filtered transactions based on current filter and search
+ * @returns {Array} Filtered transactions
+ */
+function getFilteredTransactions() {
+    let filtered = transactions;
+
+    // Apply status filter
+    if (currentFilter !== 'all') {
+        filtered = filtered.filter(transaction => {
+            const status = transaction.verificationStatus || 'pending';
+            return status === currentFilter;
+        });
+    }
+
+    // Apply advanced search filter
+    if (searchQuery) {
+        filtered = filtered.filter(transaction => {
+            return parseSearchQuery(transaction, searchQuery);
+        });
+    }
+
+    return filtered;
+}
+
+/**
+ * Parse advanced search query and match against transaction
+ * @param {Object} transaction - Transaction data
+ * @param {string} query - Search query
+ * @returns {boolean} True if transaction matches search criteria
+ */
+function parseSearchQuery(transaction, query) {
+    const customerInfo = getCustomerInfo(transaction);
+    const amount = transaction.thunderResult?.amount?.amount || transaction.amount || 0;
+    const uploadDate = new Date(transaction.uploadedAt);
+
+    // Split query by spaces to handle multiple search terms
+    const searchTerms = query.toLowerCase().trim().split(/\s+/);
+
+    return searchTerms.every(term => {
+        // Amount range searches: ">500", "<1000", "100-500"
+        if (term.startsWith('>')) {
+            const minAmount = parseFloat(term.substring(1));
+            return !isNaN(minAmount) && amount > minAmount;
+        }
+
+        if (term.startsWith('<')) {
+            const maxAmount = parseFloat(term.substring(1));
+            return !isNaN(maxAmount) && amount < maxAmount;
+        }
+
+        if (term.includes('-')) {
+            const [min, max] = term.split('-').map(v => parseFloat(v.trim()));
+            return !isNaN(min) && !isNaN(max) && amount >= min && amount <= max;
+        }
+
+        // Exact amount match
+        if (term.startsWith('amount:')) {
+            const exactAmount = parseFloat(term.substring(7));
+            return !isNaN(exactAmount) && amount === exactAmount;
+        }
+
+        // Date searches: "today", "yesterday", "2024-01-15", "01/15"
+        if (term === 'today') {
+            const today = new Date();
+            return uploadDate.toDateString() === today.toDateString();
+        }
+
+        if (term === 'yesterday') {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            return uploadDate.toDateString() === yesterday.toDateString();
+        }
+
+        if (term === 'this week') {
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            return uploadDate >= oneWeekAgo;
+        }
+
+        // Date format matches: YYYY-MM-DD, MM/DD, DD/MM
+        const dateMatch = term.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/) ||
+                         term.match(/^(\d{1,2})\/(\d{1,2})$/) ||
+                         term.match(/^(\d{1,2})-(\d{1,2})$/);
+
+        if (dateMatch) {
+            let year, month, day;
+            if (dateMatch[0].includes('-') && dateMatch.length === 4) {
+                // YYYY-MM-DD format
+                [, year, month, day] = dateMatch;
+            } else {
+                // MM/DD or DD/MM format - assume current year
+                year = new Date().getFullYear();
+                if (dateMatch[0].includes('/')) {
+                    [, month, day] = dateMatch;
+                } else {
+                    [, day, month] = dateMatch;
+                }
+            }
+
+            const searchDate = new Date(year, parseInt(month) - 1, parseInt(day));
+            return uploadDate.toDateString() === searchDate.toDateString();
+        }
+
+        // Status searches: "status:verified", "status:pending"
+        if (term.startsWith('status:')) {
+            const status = term.substring(7);
+            const transactionStatus = transaction.verificationStatus || 'pending';
+            return transactionStatus === status;
+        }
+
+        // Verification searches: "verified", "unverified", "suspicious"
+        if (['verified', 'unverified', 'suspicious', 'no data'].includes(term)) {
+            const verification = getVerificationBadge(transaction, false);
+            return verification.text.toLowerCase() === term;
+        }
+
+        // Username and display name searches (default)
+        return customerInfo.lineDisplayName.toLowerCase().includes(term) ||
+               (customerInfo.tiktokUsername && customerInfo.tiktokUsername.toLowerCase().includes(term));
+    });
+}
+
+/**
+ * Open payment methods management modal
+ */
+function openPaymentMethodsManagementModal() {
+    const modal = document.getElementById('paymentMethodsManagementModal');
+    modal.style.display = 'flex';
+    loadPaymentMethodsForManagement();
+    console.log('[Dashboard] Opened payment methods management modal');
+}
+
+/**
+ * Close payment methods management modal
+ */
+function closePaymentMethodsManagementModal() {
+    const modal = document.getElementById('paymentMethodsManagementModal');
+    modal.style.display = 'none';
+    console.log('[Dashboard] Closed payment methods management modal');
+}
+
+/**
+ * Load payment methods for management display
+ */
+async function loadPaymentMethodsForManagement() {
+    try {
+        const container = document.getElementById('paymentMethodsList');
+
+        // Show loading state
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #666;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2em; margin-bottom: 10px; display: block;"></i>
+                Loading payment methods...
+            </div>
+        `;
+
+        // Load payment methods using existing function from payment-methods.js
+        if (typeof window.PaymentMethods !== 'undefined') {
+            // The payment methods module will populate the global paymentMethods array
+            await new Promise(resolve => {
+                const checkInterval = setInterval(() => {
+                    if (window.paymentMethods && window.paymentMethods.length > 0) {
+                        clearInterval(checkInterval);
+                        resolve();
+                    }
+                }, 100);
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    resolve();
+                }, 3000);
+            });
+        }
+
+        // Update local paymentMethods array
+        if (window.paymentMethods) {
+            paymentMethods = window.paymentMethods;
+        }
+
+        // Sort by display order and then by name
+        const sortedMethods = [...paymentMethods].sort((a, b) => {
+            if (a.displayOrder !== b.displayOrder) {
+                return a.displayOrder - b.displayOrder;
+            }
+            return (a.name || '').localeCompare(b.name || '');
+        });
+
+        displayPaymentMethodsForManagement(sortedMethods);
+
+    } catch (error) {
+        console.error('[Dashboard] Error loading payment methods:', error);
+        const container = document.getElementById('paymentMethodsList');
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #dc3545;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 2em; margin-bottom: 10px; display: block;"></i>
+                Failed to load payment methods
+            </div>
+        `;
+    }
+}
+
+/**
+ * Display payment methods in management modal
+ * @param {Array} methods - Payment methods array
+ */
+function displayPaymentMethodsForManagement(methods) {
+    const container = document.getElementById('paymentMethodsList');
+
+    if (methods.length === 0) {
+        container.innerHTML = `
+            <div class="empty-payment-methods">
+                <i class="fas fa-credit-card"></i>
+                <h3>No Payment Methods</h3>
+                <p>You haven't added any payment methods yet.</p>
+                <button class="modal-button save" onclick="openPaymentMethodModal()">
+                    <i class="fas fa-plus"></i> Add Your First Payment Method
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = methods.map(method => createPaymentMethodCard(method)).join('');
+}
+
+/**
+ * Create payment method card HTML for management view
+ * @param {Object} method - Payment method data
+ * @returns {string} HTML card
+ */
+function createPaymentMethodCard(method) {
+    const isActive = method.isActive !== false;
+    const typeLabel = method.type ? method.type.replace('_', ' ').toUpperCase() : 'OTHER';
+
+    return `
+        <div class="payment-method-card ${!isActive ? 'inactive' : ''}">
+            <div class="payment-method-header">
+                <div class="payment-method-title">
+                    ${method.name || 'Unnamed Payment Method'}
+                    <span class="payment-method-type ${method.type || 'other'}">${typeLabel}</span>
+                </div>
+                <div class="payment-method-status ${isActive ? 'active' : 'inactive'}">
+                    <i class="fas fa-${isActive ? 'check-circle' : 'times-circle'}"></i>
+                    ${isActive ? 'Active' : 'Inactive'}
+                </div>
+            </div>
+
+            <div class="payment-method-details">
+                ${method.accountNumber ? `
+                    <div class="payment-method-detail">
+                        <span class="payment-method-detail-label">Account Number</span>
+                        <span class="payment-method-detail-value">${method.accountNumber}</span>
+                    </div>
+                ` : ''}
+                ${method.accountName ? `
+                    <div class="payment-method-detail">
+                        <span class="payment-method-detail-label">Account Name</span>
+                        <span class="payment-method-detail-value">${method.accountName}</span>
+                    </div>
+                ` : ''}
+                ${method.description ? `
+                    <div class="payment-method-detail">
+                        <span class="payment-method-detail-label">Description</span>
+                        <span class="payment-method-detail-value">${method.description}</span>
+                    </div>
+                ` : ''}
+                <div class="payment-method-detail">
+                    <span class="payment-method-detail-label">Display Order</span>
+                    <span class="payment-method-detail-value">${method.displayOrder || 0}</span>
+                </div>
+            </div>
+
+            ${method.imageUrl ? `
+                <div class="payment-method-qr-preview">
+                    <img src="${method.imageUrl}" alt="${method.name} QR Code" onclick="viewPaymentMethod('${method.id}')" style="cursor: pointer;">
+                </div>
+            ` : ''}
+
+            <div class="payment-method-actions">
+                ${method.imageUrl ? `
+                    <button class="btn-view" onclick="viewPaymentMethod('${method.id}')" title="View QR Code">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                ` : ''}
+                <button class="btn-edit" onclick="editPaymentMethod('${method.id}')" title="Edit Payment Method">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn-toggle" onclick="togglePaymentMethodStatus('${method.id}')" title="${isActive ? 'Deactivate' : 'Activate'}">
+                    <i class="fas fa-${isActive ? 'pause' : 'play'}"></i> ${isActive ? 'Deactivate' : 'Activate'}
+                </button>
+                <button class="btn-delete" onclick="deletePaymentMethodConfirm('${method.id}')" title="Delete Payment Method">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Edit payment method
+ * @param {string} id - Payment method ID
+ */
+function editPaymentMethod(id) {
+    // Close management modal first
+    closePaymentMethodsManagementModal();
+
+    // Use existing function from payment-methods.js if available
+    if (typeof window.PaymentMethods !== 'undefined') {
+        // Find the payment method
+        const method = paymentMethods.find(m => m.id === id);
+        if (method) {
+            // Open edit modal (this will use existing payment-methods.js functionality)
+            setTimeout(() => {
+                // Populate form with payment method data
+                document.getElementById('paymentMethodId').value = method.id;
+                document.getElementById('paymentMethodName').value = method.name || '';
+                document.getElementById('paymentMethodType').value = method.type || 'other';
+                document.getElementById('paymentMethodDescription').value = method.description || '';
+                document.getElementById('paymentMethodAccountNumber').value = method.accountNumber || '';
+                document.getElementById('paymentMethodAccountName').value = method.accountName || '';
+                document.getElementById('paymentMethodDisplayOrder').value = method.displayOrder || 0;
+                document.getElementById('paymentMethodActive').checked = method.isActive !== false;
+
+                // Show existing QR code if available
+                if (method.imageUrl) {
+                    const preview = document.getElementById('qrPreviewImage');
+                    preview.src = method.imageUrl;
+                    preview.style.display = 'block';
+                    document.getElementById('paymentMethodQR').required = false;
+                }
+
+                // Update modal title
+                document.getElementById('paymentMethodModalTitle').textContent = '✏️ Edit Payment Method';
+
+                // Open modal
+                document.getElementById('paymentMethodModal').style.display = 'flex';
+            }, 300);
+        }
+    }
+}
+
+/**
+ * Toggle payment method active status
+ * @param {string} id - Payment method ID
+ */
+async function togglePaymentMethodStatus(id) {
+    try {
+        const method = paymentMethods.find(m => m.id === id);
+        if (!method) return;
+
+        const newStatus = !(method.isActive !== false);
+
+        if (typeof window.PaymentMethods !== 'undefined') {
+            await window.PaymentMethods.updatePaymentMethod(id, { isActive: newStatus });
+
+            // Update local array
+            method.isActive = newStatus;
+
+            // Refresh display
+            loadPaymentMethodsForManagement();
+
+            console.log(`[Dashboard] Payment method ${id} ${newStatus ? 'activated' : 'deactivated'}`);
+        }
+    } catch (error) {
+        console.error('[Dashboard] Error toggling payment method status:', error);
+        alert('Failed to update payment method status');
+    }
+}
+
+/**
+ * Confirm delete payment method
+ * @param {string} id - Payment method ID
+ */
+function deletePaymentMethodConfirm(id) {
+    const method = paymentMethods.find(m => m.id === id);
+    if (!method) return;
+
+    if (confirm(`Are you sure you want to delete "${method.name || 'Unnamed'}"? This action cannot be undone.`)) {
+        deletePaymentMethodById(id);
+    }
+}
+
+/**
+ * Delete payment method by ID
+ * @param {string} id - Payment method ID
+ */
+async function deletePaymentMethodById(id) {
+    try {
+        if (typeof window.PaymentMethods !== 'undefined') {
+            await window.PaymentMethods.deletePaymentMethod(id);
+
+            // Remove from local array
+            paymentMethods = paymentMethods.filter(m => m.id !== id);
+
+            // Refresh display
+            loadPaymentMethodsForManagement();
+
+            console.log(`[Dashboard] Payment method ${id} deleted`);
+        }
+    } catch (error) {
+        console.error('[Dashboard] Error deleting payment method:', error);
+        alert('Failed to delete payment method');
+    }
 }
 
 

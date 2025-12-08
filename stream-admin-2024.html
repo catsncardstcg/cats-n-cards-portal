@@ -1062,6 +1062,470 @@
                 flex-direction: column;
             }
         }
+
+        /* Table View Styles */
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .transactions-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .transactions-table th {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            user-select: none;
+        }
+
+        .transactions-table th.sortable {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .transactions-table th.sortable:hover {
+            background: #34495e;
+        }
+
+        .transactions-table th.sortable i {
+            margin-left: 8px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .transactions-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+
+        .transactions-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .transactions-table tbody tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+
+        .transactions-table tbody tr:nth-child(even):hover {
+            background-color: #f1f3f4;
+        }
+
+        /* Table-specific status badges */
+        .table-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .table-status.pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .table-status.verifying {
+            background: #cce5ff;
+            color: #004085;
+            border: 1px solid #b3d7ff;
+        }
+
+        .table-status.verified {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .table-status.failed {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Table verification badges */
+        .table-verification {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+
+        .table-verification.verified {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .table-verification.unverified {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .table-verification.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        /* Table action buttons */
+        .table-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .table-actions button {
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .table-actions .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .table-actions .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .table-actions .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .table-actions .btn-success:hover {
+            background: #1e7e34;
+        }
+
+        .table-actions .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .table-actions .btn-info:hover {
+            background: #138496;
+        }
+
+        .table-actions .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .table-actions .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        /* Customer info in table */
+        .table-customer {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .table-customer .tiktok {
+            color: #6c757d;
+            font-size: 12px;
+            font-weight: normal;
+        }
+
+        /* Amount display in table */
+        .table-amount {
+            font-weight: 600;
+            color: #28a745;
+            font-size: 15px;
+        }
+
+        /* Date/time display in table */
+        .table-date {
+            color: #6c757d;
+            font-size: 13px;
+        }
+
+        /* View toggle buttons */
+        .view-toggle {
+            display: flex;
+            gap: 2px;
+        }
+
+        .view-toggle .filter-button {
+            padding: 10px 15px;
+            min-width: auto;
+        }
+
+        .view-toggle .filter-button.active {
+            background: #4c6ef5;
+            color: white;
+        }
+
+        /* Sort indicators */
+        .transactions-table th.sortable[data-sort-direction="asc"] i::before {
+            content: "\f0de"; /* fa-sort-up */
+        }
+
+        .transactions-table th.sortable[data-sort-direction="desc"] i::before {
+            content: "\f0dd"; /* fa-sort-down */
+        }
+
+        .transactions-table th.sortable:not([data-sort-direction]) i::before {
+            content: "\f0dc"; /* fa-sort */
+        }
+
+        /* Responsive table adjustments */
+        @media (max-width: 768px) {
+            .table-wrapper {
+                max-height: 400px;
+            }
+
+            .transactions-table {
+                font-size: 12px;
+            }
+
+            .transactions-table th,
+            .transactions-table td {
+                padding: 8px 6px;
+            }
+
+            .table-actions {
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .table-actions button {
+                font-size: 11px;
+                padding: 4px 8px;
+            }
+        }
+
+        /* Payment Methods Management Modal Styles */
+        .management-content {
+            padding: 0;
+        }
+
+        .payment-method-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .payment-method-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .payment-method-card.inactive {
+            opacity: 0.6;
+            background: #f8f9fa;
+        }
+
+        .payment-method-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .payment-method-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .payment-method-type {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            color: white;
+        }
+
+        .payment-method-type.promptpay { background: #4caf50; }
+        .payment-method-type.bank_transfer { background: #2196f3; }
+        .payment-method-type.true_wallet { background: #ff9800; }
+        .payment-method-type.line_pay { background: #00c853; }
+        .payment-method-type.other { background: #9e9e9e; }
+
+        .payment-method-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .payment-method-status.active {
+            color: #4caf50;
+        }
+
+        .payment-method-status.inactive {
+            color: #f44336;
+        }
+
+        .payment-method-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .payment-method-detail {
+            font-size: 14px;
+        }
+
+        .payment-method-detail-label {
+            font-weight: 600;
+            color: #666;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .payment-method-detail-value {
+            color: #333;
+            word-break: break-all;
+        }
+
+        .payment-method-qr-preview {
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .payment-method-qr-preview img {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .payment-method-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .payment-method-actions button {
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .payment-method-actions .btn-edit {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .payment-method-actions .btn-edit:hover {
+            background: #e0a800;
+        }
+
+        .payment-method-actions .btn-toggle {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .payment-method-actions .btn-toggle:hover {
+            background: #138496;
+        }
+
+        .payment-method-actions .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .payment-method-actions .btn-delete:hover {
+            background: #c82333;
+        }
+
+        .payment-method-actions .btn-view {
+            background: #6c757d;
+            color: white;
+        }
+
+        .payment-method-actions .btn-view:hover {
+            background: #5a6268;
+        }
+
+        /* Empty state */
+        .empty-payment-methods {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-payment-methods i {
+            font-size: 3em;
+            margin-bottom: 20px;
+            display: block;
+            color: #ddd;
+        }
+
+        .empty-payment-methods h3 {
+            margin-bottom: 10px;
+            color: #999;
+        }
+
+        .empty-payment-methods p {
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .payment-method-details {
+                grid-template-columns: 1fr;
+            }
+
+            .payment-method-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .payment-method-actions button {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1076,6 +1540,9 @@
                     LIVE
                 </span>
             </p>
+            <button class="filter-button" onclick="openPaymentMethodsManagementModal()" style="background: #4caf50; color: white; margin-top: 15px;">
+                <i class="fas fa-qrcode"></i> Manage Payment Methods
+            </button>
         </div>
 
         <div class="stats-container">
@@ -1104,32 +1571,57 @@
                 <button class="filter-button" data-filter="verifying">Verifying</button>
                 <button class="filter-button" data-filter="verified">Verified</button>
                 <button class="filter-button" data-filter="failed">Failed</button>
-                <input type="text" class="search-box" id="searchBox" placeholder="Search by username...">
+                <input type="text" class="search-box" id="searchBox" placeholder="Search by username, amount (e.g., >500, 100-500), or date...">
+                <div class="view-toggle" style="margin-left: auto;">
+                    <button class="filter-button" id="cardViewBtn" onclick="toggleViewMode('cards')" title="Card View">
+                        <i class="fas fa-th-large"></i>
+                    </button>
+                    <button class="filter-button" id="tableViewBtn" onclick="toggleViewMode('table')" title="Table View">
+                        <i class="fas fa-table"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Payment Methods Management Section -->
-        <div class="controls" style="margin-bottom: 30px;">
-            <div class="filter-group">
-                <h3 style="margin: 0; color: #333;">💳 Payment Methods Management</h3>
-                <button class="filter-button" onclick="openPaymentMethodModal()" style="background: #4caf50; color: white;">
-                    + Add Payment Method
-                </button>
-            </div>
-        </div>
-
-        <!-- Payment Methods Container -->
-        <div class="transactions-container" id="paymentMethodsContainer" style="max-height: 400px; margin-bottom: 30px;">
-            <div class="loading-spinner">
-                <div class="spinner"></div>
-                <p>Loading payment methods...</p>
-            </div>
-        </div>
-
+  
         <div class="transactions-container" id="transactionsContainer">
             <div class="loading-spinner">
                 <div class="spinner"></div>
                 <p>Loading transactions...</p>
+            </div>
+        </div>
+
+        <!-- Table View Container (Initially Hidden) -->
+        <div class="table-container" id="tableViewContainer" style="display: none;">
+            <div class="table-wrapper">
+                <table class="transactions-table" id="transactionsTable">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="uploadedAt">
+                                Date/Time <i class="fas fa-sort"></i>
+                            </th>
+                            <th class="sortable" data-sort="lineDisplayName">
+                                Customer <i class="fas fa-sort"></i>
+                            </th>
+                            <th class="sortable" data-sort="amount">
+                                Amount <i class="fas fa-sort"></i>
+                            </th>
+                            <th>Status</th>
+                            <th>Verification</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px;">
+                                <div class="loading-spinner">
+                                    <div class="spinner"></div>
+                                    <p>Loading transactions...</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -1175,20 +1667,20 @@
                 <h3>🔍 Transaction Details</h3>
             </div>
 
-            <!-- Recipient Verification Section -->
+            <!-- Payment Verification Section -->
             <div class="verification-section">
                 <div class="verification-header">
                     <span id="verificationIcon" class="verification-icon">⏳</span>
                     <div>
-                        <div class="verification-title">Recipient Verification</div>
-                        <div id="verificationStatus">Checking sender information...</div>
+                        <div class="verification-title">Payment Verification</div>
+                        <div id="verificationStatus">Checking payment recipient...</div>
                     </div>
                 </div>
 
                 <div id="senderNameSection">
-                    <div class="detail-label">Sender Name (from Thunder API):</div>
+                    <div class="detail-label">Receiver Name (from Thunder API):</div>
                     <div id="senderName" class="sender-name">Loading...</div>
-                    <div class="detail-label">Expected Recipient:</div>
+                    <div class="detail-label">Expected Streamer:</div>
                     <div id="expectedRecipient" class="sender-name">Loading...</div>
                 </div>
             </div>
@@ -1269,6 +1761,36 @@
             </div>
 
                   </div>
+    </div>
+
+    <!-- Payment Methods Management Modal -->
+    <div id="paymentMethodsManagementModal" class="edit-modal" onclick="if(event.target === this) closePaymentMethodsManagementModal()">
+        <div class="modal-content" style="max-width: 900px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3>💳 Payment Methods Management</h3>
+            </div>
+
+            <div class="management-content">
+                <!-- Add New Payment Method Button -->
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <button class="modal-button save" onclick="openPaymentMethodModal()" style="font-size: 16px; padding: 12px 24px;">
+                        <i class="fas fa-plus"></i> Add New Payment Method
+                    </button>
+                </div>
+
+                <!-- Payment Methods List -->
+                <div id="paymentMethodsList">
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2em; margin-bottom: 10px; display: block;"></i>
+                        Loading payment methods...
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="modal-button cancel" onclick="closePaymentMethodsManagementModal()">Close</button>
+            </div>
+        </div>
     </div>
 
     <!-- Payment Method Modal -->
