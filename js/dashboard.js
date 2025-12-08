@@ -316,8 +316,16 @@ function createTransactionCard(transaction) {
                     ❌ Reject
                 </button>
             ` : ''}
+            ${transaction.downloadURL ? `
+                <button class="action-button view" onclick="showImageGalleryModal('${transaction.downloadURL}', '${transaction.tikTokUsername}', '${transaction.lineDisplayName}')">
+                    🖼️ View Images
+                </button>
+            ` : ''}
             <button class="action-button view" onclick="viewTransactionDetails('${transaction.id}')">
                 👁️ View Details
+            </button>
+            <button class="action-button edit" onclick="openEditModal('${transaction.id}')">
+                ✏️ Edit
             </button>
         </div>
     `;
@@ -435,36 +443,17 @@ function showError(message) {
 }
 
 /**
- * View receipt in full screen
+ * View receipt in full screen - now opens gallery modal
  */
 function viewReceipt(imageUrl, username) {
-    window.open(imageUrl, `_blank`, `width=800,height=600,scrollbars=yes,title=${username}'s Receipt`);
+    showImageGalleryModal(imageUrl, username);
 }
 
 /**
- * View transaction details
+ * View transaction details - Opens modal with formatted data
  */
 function viewTransactionDetails(transactionId) {
-    const transaction = transactions.find(t => t.id === transactionId);
-    if (!transaction) return;
-
-    const details = `
-Transaction Details:
-=================
-User: ${transaction.tikTokUsername}
-Display Name: ${transaction.lineDisplayName}
-Amount: ${transaction.amount ? `฿${transaction.amount}` : 'N/A'}
-Type: ${transaction.uploadType}
-Status: ${transaction.status}
-Uploaded: ${transaction.uploadedAt?.toDate()}
-File: ${transaction.fileName}
-Size: ${formatFileSize(transaction.fileSize || 0)}
-
-Thunder API Result:
-${JSON.stringify(transaction.thunderResult, null, 2)}
-    `;
-
-    alert(details);
+    showTransactionDetailsModal(transactionId);
 }
 
 /**
@@ -489,6 +478,73 @@ function updateTransactionStatus(transactionId, newStatus) {
 }
 
 /**
+ * Open edit modal for transaction
+ */
+function openEditModal(transactionId) {
+    const transaction = transactions.find(t => t.id === transactionId);
+    if (!transaction) return;
+
+    // Populate modal fields with current data
+    document.getElementById('editTiktokUsername').value = transaction.tikTokUsername || '';
+    document.getElementById('editLineDisplayName').value = transaction.lineDisplayName || '';
+    document.getElementById('editAmount').value = transaction.amount || '';
+    document.getElementById('editNotes').value = transaction.adminNotes || '';
+
+    // Store transaction ID for saving
+    document.getElementById('editModal').dataset.transactionId = transactionId;
+
+    // Show modal
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+/**
+ * Close edit modal
+ */
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    delete document.getElementById('editModal').dataset.transactionId;
+}
+
+/**
+ * Save transaction changes
+ */
+function saveTransaction() {
+    const transactionId = document.getElementById('editModal').dataset.transactionId;
+    if (!transactionId) {
+        showNotification('No transaction selected for editing', 'error');
+        return;
+    }
+
+    // Get form values
+    const tiktokUsername = document.getElementById('editTiktokUsername').value.trim();
+    const lineDisplayName = document.getElementById('editLineDisplayName').value.trim();
+    const amount = parseFloat(document.getElementById('editAmount').value) || null;
+    const adminNotes = document.getElementById('editNotes').value.trim();
+
+    // Validate required fields
+    if (!tiktokUsername) {
+        showNotification('TikTok username is required', 'error');
+        return;
+    }
+
+    // Update transaction in Firestore
+    db.collection('receipts').doc(transactionId).update({
+        tiktokUsername: tiktokUsername,
+        lineDisplayName: lineDisplayName,
+        amount: amount,
+        adminNotes: adminNotes,
+        lastModified: new Date(),
+        modifiedBy: 'streamer'
+    }).then(() => {
+        showNotification('Transaction updated successfully', 'success');
+        closeEditModal();
+    }).catch(error => {
+        console.error('[Dashboard] Error updating transaction:', error);
+        showNotification('Failed to update transaction', 'error');
+    });
+}
+
+/**
  * Cleanup when page is unloaded
  */
 window.addEventListener('beforeunload', () => {
@@ -497,6 +553,179 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
+
+/**
+ * Show transaction details modal
+ */
+function showTransactionDetailsModal(transactionId) {
+    const transaction = transactions.find(t => t.id === transactionId);
+    if (!transaction) {
+        showToast('Transaction not found', 'error');
+        return;
+    }
+
+    // Populate transaction details
+    document.getElementById('detailTiktokUsername').textContent = transaction.tikTokUsername || 'N/A';
+    document.getElementById('detailLineDisplayName').textContent = transaction.lineDisplayName || 'N/A';
+    document.getElementById('detailAmount').textContent = transaction.amount ? `฿${transaction.amount}` : 'N/A';
+    document.getElementById('detailUploadType').textContent = transaction.uploadType || 'N/A';
+    document.getElementById('detailStatus').textContent = transaction.status || 'N/A';
+    document.getElementById('detailUploadedAt').textContent = transaction.uploadedAt?.toDate().toLocaleString('th-TH') || 'N/A';
+    document.getElementById('detailFileName').textContent = transaction.fileName || 'N/A';
+    document.getElementById('detailFileSize').textContent = formatFileSize(transaction.fileSize || 0);
+
+    // Set expected recipient (LINE display name)
+    document.getElementById('expectedRecipient').textContent = transaction.lineDisplayName || 'N/A';
+
+    // Process Thunder API data
+    if (transaction.thunderResult) {
+        const formattedData = formatThunderApiResponse(transaction.thunderResult);
+        document.getElementById('thunderDataContent').textContent = formattedData.formattedText;
+
+        // Extract and display sender name
+        if (formattedData.senderName) {
+            document.getElementById('senderName').textContent = formattedData.senderName;
+
+            // Check verification status
+            const expectedRecipient = transaction.lineDisplayName;
+            const senderName = formattedData.senderName.toLowerCase().trim();
+            const expected = expectedRecipient.toLowerCase().trim();
+
+            if (senderName && expected) {
+                const verificationIcon = document.getElementById('verificationIcon');
+                const verificationStatus = document.getElementById('verificationStatus');
+                const senderNameElement = document.getElementById('senderName');
+
+                if (senderName.includes(expected) || expected.includes(senderName)) {
+                    verificationIcon.textContent = '✅';
+                    verificationIcon.className = 'verification-icon verification-success';
+                    verificationStatus.textContent = 'Sender name matches expected recipient';
+                    verificationStatus.style.color = '#28a745';
+                    senderNameElement.style.borderColor = '#28a745';
+                } else {
+                    verificationIcon.textContent = '❌';
+                    verificationIcon.className = 'verification-icon verification-error';
+                    verificationStatus.textContent = 'Warning: Sender name does not match expected recipient';
+                    verificationStatus.style.color = '#dc3545';
+                    senderNameElement.style.borderColor = '#dc3545';
+                }
+            } else {
+                document.getElementById('verificationIcon').textContent = '⚠️';
+                document.getElementById('verificationIcon').className = 'verification-icon verification-warning';
+                document.getElementById('verificationStatus').textContent = 'Unable to verify sender information';
+            }
+        } else {
+            document.getElementById('senderName').textContent = 'Not available';
+            document.getElementById('verificationIcon').textContent = '⚠️';
+            document.getElementById('verificationIcon').className = 'verification-icon verification-warning';
+            document.getElementById('verificationStatus').textContent = 'Sender information not available';
+        }
+    } else {
+        document.getElementById('senderName').textContent = 'No API data';
+        document.getElementById('verificationIcon').textContent = '❌';
+        document.getElementById('verificationIcon').className = 'verification-icon verification-error';
+        document.getElementById('verificationStatus').textContent = 'No Thunder API data available';
+        document.getElementById('thunderDataContent').textContent = 'No API response data available';
+    }
+
+    // Show modal
+    document.getElementById('detailsModal').style.display = 'flex';
+
+    // Add ESC key listener
+    document.addEventListener('keydown', handleDetailsModalESC);
+}
+
+/**
+ * Format Thunder API response for readable display
+ */
+function formatThunderApiResponse(thunderData) {
+    try {
+        // Extract sender name from nested structure
+        let senderName = null;
+
+        if (thunderData.sender && thunderData.sender.account && thunderData.sender.account.name) {
+            senderName = thunderData.sender.account.name.th || thunderData.sender.account.name.en || null;
+        }
+
+        // Build formatted text
+        let formattedText = '';
+
+        if (thunderData.transaction && thunderData.transaction.amount) {
+            formattedText += `Amount: ${thunderData.transaction.amount}\n`;
+        }
+
+        if (thunderData.transaction && thunderData.transaction.reference) {
+            formattedText += `Reference: ${thunderData.transaction.reference}\n`;
+        }
+
+        if (thunderData.transaction && thunderData.transaction.date) {
+            formattedText += `Date: ${new Date(thunderData.transaction.date).toLocaleString('th-TH')}\n`;
+        }
+
+        if (thunderData.sender && thunderData.sender.account && thunderData.sender.account.number) {
+            formattedText += `Sender Account: ${thunderData.sender.account.number}\n`;
+        }
+
+        if (thunderData.sender && thunderData.sender.account && thunderData.sender.account.name) {
+            formattedText += `Sender Name: ${thunderData.sender.account.name.th || thunderData.sender.account.name.en || 'N/A'}\n`;
+        }
+
+        if (thunderData.sender && thunderData.sender.bank && thunderData.sender.bank.name) {
+            formattedText += `Sender Bank: ${thunderData.sender.bank.name.th || thunderData.sender.bank.name.en || 'N/A'}\n`;
+        }
+
+        if (thunderData.receiver && thunderData.receiver.account && thunderData.receiver.account.name) {
+            formattedText += `Receiver Name: ${thunderData.receiver.account.name.th || thunderData.receiver.account.name.en || 'N/A'}\n`;
+        }
+
+        if (thunderData.receiver && thunderData.receiver.account && thunderData.receiver.account.number) {
+            formattedText += `Receiver Account: ${thunderData.receiver.account.number}\n`;
+        }
+
+        if (thunderData.receiver && thunderData.receiver.bank && thunderData.receiver.bank.name) {
+            formattedText += `Receiver Bank: ${thunderData.receiver.bank.name.th || thunderData.receiver.bank.name.en || 'N/A'}\n`;
+        }
+
+        // Add any other relevant fields
+        if (thunderData.transaction && thunderData.transaction.description) {
+            formattedText += `Description: ${thunderData.transaction.description}\n`;
+        }
+
+        // If no transaction details were found, fall back to full JSON
+        if (!formattedText) {
+            formattedText = JSON.stringify(thunderData, null, 2);
+        }
+
+        return {
+            senderName: senderName,
+            formattedText: formattedText
+        };
+
+    } catch (error) {
+        console.error('Error formatting Thunder API response:', error);
+        return {
+            senderName: null,
+            formattedText: 'Error formatting API response:\n' + JSON.stringify(thunderData, null, 2)
+        };
+    }
+}
+
+/**
+ * Close transaction details modal
+ */
+function closeDetailsModal() {
+    document.getElementById('detailsModal').style.display = 'none';
+    document.removeEventListener('keydown', handleDetailsModalESC);
+}
+
+/**
+ * Handle ESC key for details modal
+ */
+function handleDetailsModalESC(event) {
+    if (event.key === 'Escape') {
+        closeDetailsModal();
+    }
+}
 
 // Add animation styles
 const style = document.createElement('style');
@@ -524,3 +753,324 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// =================================
+// IMAGE GALLERY MODAL FUNCTIONALITY
+// =================================
+
+let galleryData = {
+    images: [],
+    currentIndex: 0,
+    isZoomed: false,
+    touchStartX: 0,
+    touchEndX: 0
+};
+
+/**
+ * Show image gallery modal
+ */
+function showImageGalleryModal(imageUrl, tiktokUsername, lineDisplayName) {
+    // Initialize gallery with current image
+    const username = lineDisplayName || tiktokUsername || 'Unknown User';
+
+    // Collect all receipts from current user across transactions
+    const userImages = collectUserReceiptImages(tiktokUsername, lineDisplayName);
+
+    // If no images found, use the current image
+    if (userImages.length === 0 && imageUrl) {
+        userImages.push({
+            url: imageUrl,
+            username: username,
+            transactionId: 'unknown',
+            uploadedAt: new Date()
+        });
+    }
+
+    galleryData.images = userImages;
+
+    // Find current image index
+    galleryData.currentIndex = userImages.findIndex(img => img.url === imageUrl);
+    if (galleryData.currentIndex === -1) {
+        galleryData.currentIndex = 0;
+    }
+
+    // Update gallery title
+    document.getElementById('galleryTitle').textContent = `${username}'s Receipts`;
+
+    // Generate thumbnails
+    generateThumbnails();
+
+    // Display current image
+    displayCurrentImage();
+
+    // Show modal
+    document.getElementById('galleryModal').style.display = 'block';
+
+    // Add event listeners
+    setupGalleryEventListeners();
+
+    console.log(`[Gallery] Opened gallery with ${userImages.length} images for ${username}`);
+}
+
+/**
+ * Collect all receipt images from a user across all transactions
+ */
+function collectUserReceiptImages(tiktokUsername, lineDisplayName) {
+    const userImages = [];
+
+    transactions.forEach(transaction => {
+        // Match by TikTok username or LINE display name
+        const isTikTokMatch = tiktokUsername && transaction.tikTokUsername === tiktokUsername;
+        const isLineMatch = lineDisplayName && transaction.lineDisplayName === lineDisplayName;
+
+        if ((isTikTokMatch || isLineMatch) && transaction.downloadURL) {
+            userImages.push({
+                url: transaction.downloadURL,
+                username: transaction.lineDisplayName || transaction.tikTokUsername || 'Unknown',
+                transactionId: transaction.id,
+                uploadedAt: transaction.uploadedAt?.toDate() || new Date(),
+                amount: transaction.amount,
+                status: transaction.status
+            });
+        }
+    });
+
+    // Sort by upload date (newest first)
+    userImages.sort((a, b) => b.uploadedAt - a.uploadedAt);
+
+    return userImages;
+}
+
+/**
+ * Generate thumbnails for gallery
+ */
+function generateThumbnails() {
+    const container = document.getElementById('galleryThumbnails');
+    container.innerHTML = '';
+
+    galleryData.images.forEach((image, index) => {
+        const thumbnail = document.createElement('img');
+        thumbnail.src = image.url;
+        thumbnail.className = 'gallery-thumbnail';
+        thumbnail.alt = `Receipt ${index + 1}`;
+
+        if (index === galleryData.currentIndex) {
+            thumbnail.classList.add('active');
+        }
+
+        thumbnail.onclick = () => jumpToImage(index);
+        container.appendChild(thumbnail);
+    });
+
+    // Scroll to active thumbnail
+    scrollToActiveThumbnail();
+}
+
+/**
+ * Display current image in gallery
+ */
+function displayCurrentImage() {
+    if (galleryData.images.length === 0) return;
+
+    const currentImage = galleryData.images[galleryData.currentIndex];
+    const mainImage = document.getElementById('galleryMainImage');
+    const counter = document.getElementById('galleryImageCounter');
+
+    mainImage.src = currentImage.url;
+    counter.textContent = `${galleryData.currentIndex + 1} / ${galleryData.images.length}`;
+
+    // Update navigation buttons
+    document.getElementById('galleryPrev').disabled = galleryData.currentIndex === 0;
+    document.getElementById('galleryNext').disabled = galleryData.currentIndex === galleryData.images.length - 1;
+
+    // Update thumbnail active state
+    updateThumbnailActiveState();
+
+    // Reset zoom
+    resetZoom();
+}
+
+/**
+ * Navigate gallery (previous/next)
+ */
+function navigateGallery(direction) {
+    if (direction === 'prev' && galleryData.currentIndex > 0) {
+        galleryData.currentIndex--;
+    } else if (direction === 'next' && galleryData.currentIndex < galleryData.images.length - 1) {
+        galleryData.currentIndex++;
+    }
+
+    displayCurrentImage();
+}
+
+/**
+ * Jump to specific image by index
+ */
+function jumpToImage(index) {
+    if (index >= 0 && index < galleryData.images.length) {
+        galleryData.currentIndex = index;
+        displayCurrentImage();
+        scrollToActiveThumbnail();
+    }
+}
+
+/**
+ * Update thumbnail active state
+ */
+function updateThumbnailActiveState() {
+    const thumbnails = document.querySelectorAll('.gallery-thumbnail');
+    thumbnails.forEach((thumbnail, index) => {
+        if (index === galleryData.currentIndex) {
+            thumbnail.classList.add('active');
+        } else {
+            thumbnail.classList.remove('active');
+        }
+    });
+}
+
+/**
+ * Scroll to active thumbnail
+ */
+function scrollToActiveThumbnail() {
+    const container = document.getElementById('galleryThumbnails');
+    const activeThumbnail = container.querySelector('.gallery-thumbnail.active');
+
+    if (activeThumbnail) {
+        activeThumbnail.scrollIntoView({
+            behavior: 'smooth',
+            inline: 'center',
+            block: 'nearest'
+        });
+    }
+}
+
+/**
+ * Toggle zoom on main image
+ */
+function toggleZoom() {
+    const mainImage = document.getElementById('galleryMainImage');
+    galleryData.isZoomed = !galleryData.isZoomed;
+
+    if (galleryData.isZoomed) {
+        mainImage.classList.add('zoomed');
+    } else {
+        mainImage.classList.remove('zoomed');
+    }
+}
+
+/**
+ * Reset zoom
+ */
+function resetZoom() {
+    const mainImage = document.getElementById('galleryMainImage');
+    mainImage.classList.remove('zoomed');
+    galleryData.isZoomed = false;
+}
+
+/**
+ * Download current image
+ */
+function downloadCurrentImage() {
+    if (galleryData.images.length === 0) return;
+
+    const currentImage = galleryData.images[galleryData.currentIndex];
+    const link = document.createElement('a');
+    link.href = currentImage.url;
+    link.download = `receipt_${currentImage.username}_${currentImage.transactionId}.jpg`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showNotification('Download started', 'success');
+}
+
+/**
+ * Close gallery modal
+ */
+function closeGalleryModal() {
+    document.getElementById('galleryModal').style.display = 'none';
+    resetZoom();
+    removeGalleryEventListeners();
+}
+
+/**
+ * Setup gallery event listeners
+ */
+function setupGalleryEventListeners() {
+    // Keyboard navigation
+    document.addEventListener('keydown', handleGalleryKeyboard);
+
+    // Touch events for mobile swipe
+    const mainImage = document.getElementById('galleryMainImage');
+    mainImage.addEventListener('touchstart', handleTouchStart, { passive: true });
+    mainImage.addEventListener('touchend', handleTouchEnd, { passive: true });
+}
+
+/**
+ * Remove gallery event listeners
+ */
+function removeGalleryEventListeners() {
+    document.removeEventListener('keydown', handleGalleryKeyboard);
+
+    const mainImage = document.getElementById('galleryMainImage');
+    mainImage.removeEventListener('touchstart', handleTouchStart);
+    mainImage.removeEventListener('touchend', handleTouchEnd);
+}
+
+/**
+ * Handle keyboard navigation for gallery
+ */
+function handleGalleryKeyboard(event) {
+    switch (event.key) {
+        case 'ArrowLeft':
+            event.preventDefault();
+            navigateGallery('prev');
+            break;
+        case 'ArrowRight':
+            event.preventDefault();
+            navigateGallery('next');
+            break;
+        case 'Escape':
+            closeGalleryModal();
+            break;
+        case ' ':
+        case 'Enter':
+            event.preventDefault();
+            toggleZoom();
+            break;
+    }
+}
+
+/**
+ * Handle touch start for swipe detection
+ */
+function handleTouchStart(event) {
+    galleryData.touchStartX = event.touches[0].clientX;
+}
+
+/**
+ * Handle touch end for swipe detection
+ */
+function handleTouchEnd(event) {
+    galleryData.touchEndX = event.changedTouches[0].clientX;
+    handleSwipe();
+}
+
+/**
+ * Handle swipe gesture
+ */
+function handleSwipe() {
+    const swipeThreshold = 50;
+    const diff = galleryData.touchStartX - galleryData.touchEndX;
+
+    if (Math.abs(diff) > swipeThreshold) {
+        if (diff > 0) {
+            // Swipe left - next image
+            navigateGallery('next');
+        } else {
+            // Swipe right - previous image
+            navigateGallery('prev');
+        }
+    }
+}
