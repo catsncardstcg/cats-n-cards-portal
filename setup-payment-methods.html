@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Payment Methods - Cats N Cards Portal</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        button {
+            background: #4caf50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .alert {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            display: none;
+        }
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .alert.show {
+            display: block;
+        }
+        .existing-methods {
+            margin: 30px 0;
+        }
+        .method-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            border-left: 4px solid #007bff;
+        }
+        .method-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .method-status.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        .method-status.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏪 Setup Payment Methods</h1>
+        <p>This page allows you to setup initial payment methods for the Cats N Cards portal. Use this to configure your QR codes and payment options.</p>
+
+        <div id="alert" class="alert"></div>
+
+        <form id="paymentMethodForm">
+            <div class="form-group">
+                <label for="methodName">Payment Method Name *</label>
+                <input type="text" id="methodName" placeholder="e.g., PromptPay - นทีธาร ปัญญากร" required>
+            </div>
+
+            <div class="form-group">
+                <label for="methodType">Payment Type *</label>
+                <select id="methodType" required>
+                    <option value="promptpay">PromptPay</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="true_wallet">TrueWallet</option>
+                    <option value="line_pay">LINE Pay</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="methodDescription">Description</label>
+                <input type="text" id="methodDescription" placeholder="e.g., PromptPay: นทีธาร ปัญญากร">
+            </div>
+
+            <div class="form-group">
+                <label for="methodAccountNumber">Account Number</label>
+                <input type="text" id="methodAccountNumber" placeholder="e.g., 081-234-5678">
+            </div>
+
+            <div class="form-group">
+                <label for="methodAccountName">Account Name</label>
+                <input type="text" id="methodAccountName" placeholder="e.g., นทีธาร ปัญญากร">
+            </div>
+
+            <div class="form-group">
+                <label for="methodQRCode">QR Code Image URL</label>
+                <input type="url" id="methodQRCode" placeholder="https://example.com/qr-code.png">
+                <small style="color: #666;">Enter the URL to your QR code image. You can upload to Firebase Storage or any image hosting service.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="methodDisplayOrder">Display Order</label>
+                <input type="number" id="methodDisplayOrder" placeholder="0" min="0" value="0">
+                <small style="color: #666;">Lower numbers appear first in the list</small>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="methodActive" checked>
+                    Active
+                </label>
+                <small style="color: #666; display: block;">Only active payment methods will be shown to customers</small>
+            </div>
+
+            <button type="submit">💾 Save Payment Method</button>
+        </form>
+
+        <div class="existing-methods">
+            <h2>📱 Existing Payment Methods</h2>
+            <div id="methodsList">
+                <p>Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <script>
+        let db;
+
+        // Initialize Firebase
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('[Setup] Initializing Firebase...');
+
+            // Wait for Firebase to be ready
+            const initCheck = setInterval(() => {
+                if (typeof isFirestoreReady === 'function' && isFirestoreReady()) {
+                    clearInterval(initCheck);
+                    initializeSetup();
+                }
+            }, 100);
+
+            // Fallback timeout
+            setTimeout(() => {
+                if (typeof isFirestoreReady !== 'function' || !isFirestoreReady()) {
+                    console.error('[Setup] Firebase initialization timeout');
+                    showAlert('Failed to initialize Firebase. Please refresh the page.', 'error');
+                }
+            }, 5000);
+        });
+
+        function initializeSetup() {
+            db = getFirebaseFirestore();
+            loadExistingMethods();
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('paymentMethodForm').addEventListener('submit', savePaymentMethod);
+        }
+
+        async function loadExistingMethods() {
+            try {
+                const snapshot = await db.collection('paymentMethods')
+                    .orderBy('displayOrder', 'asc')
+                    .get();
+
+                const methods = [];
+                snapshot.forEach(doc => {
+                    methods.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+
+                displayMethods(methods);
+
+            } catch (error) {
+                console.error('[Setup] Error loading payment methods:', error);
+                showAlert('Failed to load existing payment methods: ' + error.message, 'error');
+            }
+        }
+
+        function displayMethods(methods) {
+            const container = document.getElementById('methodsList');
+
+            if (!methods.length) {
+                container.innerHTML = '<p>No payment methods found. Create your first one above!</p>';
+                return;
+            }
+
+            const html = methods.map(method => {
+                const statusBadge = method.isActive ?
+                    '<span class="method-status active">Active</span>' :
+                    '<span class="method-status inactive">Inactive</span>';
+
+                return `
+                    <div class="method-card">
+                        <strong>${method.name}</strong> ${statusBadge}
+                        <br>
+                        <small>Type: ${method.type} | Order: ${method.displayOrder || 0}</small>
+                        <br>
+                        ${method.description ? `<small>${method.description}</small><br>` : ''}
+                        ${method.accountNumber ? `<small>Account: ${method.accountNumber}</small><br>` : ''}
+                        ${method.imageUrl ? `<small>QR: ✅ Uploaded</small>` : '<small>QR: ❌ Missing</small>'}
+                        <br>
+                        <button onclick="deletePaymentMethod('${method.id}')" style="margin-top: 10px; background: #f44336;">🗑️ Delete</button>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        async function savePaymentMethod(event) {
+            event.preventDefault();
+
+            try {
+                const formData = {
+                    name: document.getElementById('methodName').value.trim(),
+                    type: document.getElementById('methodType').value,
+                    description: document.getElementById('methodDescription').value.trim(),
+                    accountNumber: document.getElementById('methodAccountNumber').value.trim(),
+                    accountName: document.getElementById('methodAccountName').value.trim(),
+                    imageUrl: document.getElementById('methodQRCode').value.trim(),
+                    displayOrder: parseInt(document.getElementById('methodDisplayOrder').value) || 0,
+                    isActive: document.getElementById('methodActive').checked
+                };
+
+                if (!formData.name || !formData.type) {
+                    showAlert('Name and type are required', 'error');
+                    return;
+                }
+
+                const paymentMethodData = {
+                    ...formData,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                };
+
+                await db.collection('paymentMethods').add(paymentMethodData);
+
+                showAlert('Payment method created successfully!', 'success');
+
+                // Reset form
+                document.getElementById('paymentMethodForm').reset();
+
+                // Reload methods
+                await loadExistingMethods();
+
+            } catch (error) {
+                console.error('[Setup] Error saving payment method:', error);
+                showAlert('Error saving payment method: ' + error.message, 'error');
+            }
+        }
+
+        async function deletePaymentMethod(id) {
+            if (!confirm('Are you sure you want to delete this payment method?')) {
+                return;
+            }
+
+            try {
+                await db.collection('paymentMethods').doc(id).delete();
+                showAlert('Payment method deleted successfully', 'success');
+                await loadExistingMethods();
+            } catch (error) {
+                console.error('[Setup] Error deleting payment method:', error);
+                showAlert('Error deleting payment method: ' + error.message, 'error');
+            }
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert ${type} show`;
+
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

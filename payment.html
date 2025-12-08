@@ -306,6 +306,38 @@
             color: #666;
             font-size: 0.9em;
         }
+
+        .payment-method-selector {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1.1em;
+            background: white;
+            transition: border-color 0.3s;
+        }
+
+        .payment-method-selector:focus {
+            outline: none;
+            border-color: #11998e;
+        }
+
+        .payment-method-loading {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+            font-style: italic;
+        }
+
+        .payment-method-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -344,10 +376,18 @@
 
                 <div class="divider">สแกนเพื่อชำระเงิน</div>
 
+                <!-- Payment Method Selector -->
+                <div class="form-group">
+                    <label for="payment-method-selector">เลือกช่องทางชำระเงิน</label>
+                    <select id="payment-method-selector" class="payment-method-selector">
+                        <option value="">กำลังโหลด...</option>
+                    </select>
+                </div>
+
                 <!-- QR Code -->
                 <div class="qr-section">
-                    <img src="qr.png" alt="PromptPay QR Code">
-                    <p style="color: #666; margin-top: 10px; font-size: 0.9em;">PromptPay: นทีธาร ปัญญากร</p>
+                    <img src="qr.png" alt="Payment QR Code" id="qr-code-image">
+                    <p style="color: #666; margin-top: 10px; font-size: 0.9em;" id="qr-code-description">โปรดเลือกช่องทางชำระเงิน</p>
                 </div>
 
                 <div class="divider">อัปโหลดหลักฐาน</div>
@@ -417,6 +457,9 @@
 
     <!-- User Mapping Module -->
     <script defer src="user-mapping.js"></script>
+
+    <!-- Payment Methods Management Module -->
+    <script defer src="js/payment-methods.js"></script>
 
     <!-- Image Compression Library -->
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
@@ -616,6 +659,116 @@
             }, 5000);
         }
 
+        // Initialize payment methods when page loads
+        function initializePaymentMethodsPage() {
+            console.log('[Payment] Initializing payment methods...');
+
+            // Setup payment method selector
+            const selector = document.getElementById('payment-method-selector');
+            if (selector) {
+                selector.addEventListener('change', handlePaymentMethodSelection);
+            }
+
+            // Wait for payment methods module to load
+            const checkPaymentMethods = setInterval(() => {
+                if (typeof window.PaymentMethods !== 'undefined') {
+                    clearInterval(checkPaymentMethods);
+
+                    // Load payment methods
+                    window.PaymentMethods.getActivePaymentMethods().then(methods => {
+                        updatePaymentMethodSelector(methods);
+                    }).catch(error => {
+                        console.error('[Payment] Error loading payment methods:', error);
+                        showPaymentMethodError('Failed to load payment methods');
+                    });
+                }
+            }, 100);
+        }
+
+        // Handle payment method selection
+        function handlePaymentMethodSelection() {
+            const selector = document.getElementById('payment-method-selector');
+            const selectedId = selector.value;
+            const qrImage = document.getElementById('qr-code-image');
+            const qrDescription = document.getElementById('qr-code-description');
+
+            if (!selectedId) {
+                // Reset to default
+                qrImage.src = 'qr.png';
+                qrDescription.textContent = 'โปรดเลือกช่องทางชำระเงิน';
+                return;
+            }
+
+            // Get selected payment method
+            if (typeof window.PaymentMethods !== 'undefined') {
+                const methods = window.PaymentMethods.getActivePaymentMethods();
+                const selectedMethod = methods.find(m => m.id === selectedId);
+
+                if (selectedMethod && selectedMethod.imageUrl) {
+                    qrImage.src = selectedMethod.imageUrl;
+                    qrImage.alt = `${selectedMethod.name} QR Code`;
+                    qrDescription.textContent = `สแกน QR Code สำหรับ ${selectedMethod.name}`;
+
+                    if (selectedMethod.accountName) {
+                        qrDescription.textContent += ` (${selectedMethod.accountName})`;
+                    }
+                } else {
+                    // Show placeholder for missing QR code
+                    qrImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRkZGMkYyIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iODAiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iI0Q5MzAzQCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+UviDinJTos4Hwn5CoPC90ZXh0Pgo8dGV4dCB4PSIxMDAiIHk9IjEwMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjRDM5MDNEIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7guYHguLLguJXguKXguJDguLfguY3guJU8L3RleHQ+Cjwvc3ZnPg==';
+                    qrDescription.textContent = 'ไม่พบ QR Code สำหรับช่องทางชำระเงินนี้';
+                }
+            }
+        }
+
+        // Update payment method selector
+        function updatePaymentMethodSelector(methods) {
+            const selector = document.getElementById('payment-method-selector');
+            if (!selector) return;
+
+            selector.innerHTML = '<option value="">เลือกช่องทางชำระเงิน</option>';
+
+            if (methods.length === 0) {
+                selector.innerHTML = '<option value="">ไม่มีช่องทางชำระเงินที่ใช้งานได้</option>';
+                showPaymentMethodError('ไม่มีช่องทางชำระเงินที่ใช้งานได้อยู่ในขณะนี้');
+                return;
+            }
+
+            methods.forEach(method => {
+                const option = document.createElement('option');
+                option.value = method.id;
+                option.textContent = `${method.name} (${method.type.replace('_', ' ')})`;
+                selector.appendChild(option);
+            });
+
+            // Auto-select first payment method
+            if (methods.length > 0) {
+                selector.value = methods[0].id;
+                handlePaymentMethodSelection();
+            }
+        }
+
+        // Show payment method error
+        function showPaymentMethodError(message) {
+            const qrSection = document.querySelector('.qr-section');
+            if (qrSection) {
+                const errorHtml = `
+                    <div class="payment-method-error" style="
+                        background: #f8d7da;
+                        color: #721c24;
+                        border: 1px solid #f5c6cb;
+                        padding: 12px;
+                        border-radius: 8px;
+                        margin: 10px 0;
+                        font-size: 0.9em;
+                        text-align: center;
+                    ">
+                        ${message}
+                    </div>
+                `;
+                qrSection.innerHTML = errorHtml;
+            }
+        }
+
         // Initialize LIFF when page loads
         window.addEventListener('DOMContentLoaded', async function() {
             console.log('[Payment] Initializing LIFF...');
@@ -663,6 +816,9 @@
             } else {
                 console.log('[Payment] LIFF not available (not in LINE browser)');
             }
+
+            // Initialize payment methods
+            initializePaymentMethodsPage();
         });
     </script>
 </body>

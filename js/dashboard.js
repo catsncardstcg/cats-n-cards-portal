@@ -118,6 +118,15 @@ function startRealtimeMonitoring() {
                     ...change.doc.data()
                 };
 
+                // Debug: Log incoming transaction data
+                console.log(`[Dashboard] ${change.type} transaction:`, {
+                    id: transaction.id,
+                    tikTokUsername: transaction.tikTokUsername,
+                    'tiktok_username': transaction.tiktok_username,
+                    'TikTokUsername': transaction.TikTokUsername,
+                    lineDisplayName: transaction.lineDisplayName
+                });
+
                 if (change.type === 'added') {
                     handleNewTransaction(transaction);
                 } else if (change.type === 'modified') {
@@ -303,71 +312,77 @@ function createTransactionCard(transaction) {
     const amount = transaction.amount ? `฿${transaction.amount.toLocaleString()}` : 'N/A';
 
     // Get user initials for avatar
-    const initials = getUserInitials(transaction.lineDisplayName || transaction.tikTokUsername);
+    const tiktokUsername = transaction.tikTokUsername || transaction.tiktok_username || transaction.TikTokUsername || '';
+    const initials = getUserInitials(transaction.lineDisplayName || tiktokUsername);
 
     // Get verification badge
     const verificationBadge = getVerificationBadge(transaction);
 
+    // Get TikTok username - check multiple possible field names
+    const tiktokUsername = transaction.tikTokUsername || transaction.tiktok_username || transaction.TikTokUsername || '';
+
+    // Debug: Log username fields for this transaction
+    if (transaction.id) {
+        console.log(`[Dashboard] Transaction ${transaction.id} username fields:`, {
+            tikTokUsername: transaction.tikTokUsername,
+            'tiktok_username': transaction.tiktok_username,
+            'TikTokUsername': transaction.TikTokUsername,
+            resolvedUsername: tiktokUsername
+        });
+    }
+
+    // Combine usernames for compact display
+    const combinedUsername = tiktokUsername && transaction.lineDisplayName
+        ? `${tiktokUsername} • ${transaction.lineDisplayName}`
+        : tiktokUsername || transaction.lineDisplayName || 'Unknown';
+
     card.innerHTML = `
         <div class="transaction-header">
             <div class="transaction-user">
-                <div class="user-avatar">${initials}</div>
-                <div class="user-info">
-                    <h3>${transaction.tikTokUsername || 'Unknown'}</h3>
-                    <p>${transaction.lineDisplayName || 'No display name'}</p>
+                <div class="user-avatar compact">${initials}</div>
+                <div class="user-info compact">
+                    <h3>${combinedUsername}</h3>
                 </div>
             </div>
-            <div class="transaction-amount">
-                ${amount}
+            <div class="transaction-amount compact">
+                <span class="amount-text">${amount}</span>
                 ${verificationBadge}
             </div>
         </div>
 
-        <div class="transaction-details">
+        <div class="transaction-details compact">
             <div class="detail-item">
-                <span class="detail-label">Type</span>
-                <span class="detail-value">${transaction.uploadType || 'payment'}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Time</span>
                 <span class="detail-value">${timeAgo}</span>
             </div>
             <div class="detail-item">
-                <span class="detail-label">Status</span>
                 <span class="detail-value">
                     <span class="status-badge ${transaction.status}">${transaction.status}</span>
                 </span>
             </div>
             <div class="detail-item">
-                <span class="detail-label">File Size</span>
-                <span class="detail-value">${formatFileSize(transaction.fileSize || 0)}</span>
+                <span class="detail-value">${transaction.uploadType || 'payment'}</span>
             </div>
         </div>
 
-        ${transaction.downloadURL ? `
-            <img src="${transaction.downloadURL}" alt="Receipt" class="receipt-preview"
-                 onclick="viewReceipt('${transaction.downloadURL}', '${transaction.tikTokUsername}')">
-        ` : ''}
-
-        <div class="transaction-actions">
+        <div class="transaction-actions compact">
             ${transaction.status === 'pending' ? `
-                <button class="action-button approve" onclick="updateTransactionStatus('${transaction.id}', 'verified')">
-                    ✅ Approve
+                <button class="action-button compact approve" onclick="updateTransactionStatus('${transaction.id}', 'verified')" title="Approve">
+                    ✓
                 </button>
-                <button class="action-button reject" onclick="updateTransactionStatus('${transaction.id}', 'failed')">
-                    ❌ Reject
+                <button class="action-button compact reject" onclick="updateTransactionStatus('${transaction.id}', 'failed')" title="Reject">
+                    ✕
                 </button>
             ` : ''}
             ${transaction.downloadURL ? `
-                <button class="action-button view" onclick="showImageGalleryModal('${transaction.downloadURL}', '${transaction.tikTokUsername}', '${transaction.lineDisplayName}')">
-                    🖼️ View Images
+                <button class="action-button compact view" onclick="showImageGalleryModal('${transaction.downloadURL}', '${tiktokUsername}', '${transaction.lineDisplayName}')" title="View Images">
+                    🖼
                 </button>
             ` : ''}
-            <button class="action-button view" onclick="viewTransactionDetails('${transaction.id}')">
-                👁️ View Details
+            <button class="action-button compact view" onclick="viewTransactionDetails('${transaction.id}')" title="View Details">
+                👁
             </button>
-            <button class="action-button edit" onclick="openEditModal('${transaction.id}')">
-                ✏️ Edit
+            <button class="action-button compact edit" onclick="openEditModal('${transaction.id}')" title="Edit">
+                ✏
             </button>
         </div>
     `;
@@ -527,7 +542,8 @@ function openEditModal(transactionId) {
     if (!transaction) return;
 
     // Populate modal fields with current data
-    document.getElementById('editTiktokUsername').value = transaction.tikTokUsername || '';
+    const tiktokUsername = transaction.tikTokUsername || transaction.tiktok_username || transaction.TikTokUsername || '';
+    document.getElementById('editTiktokUsername').value = tiktokUsername;
     document.getElementById('editLineDisplayName').value = transaction.lineDisplayName || '';
     document.getElementById('editAmount').value = transaction.amount || '';
     document.getElementById('editNotes').value = transaction.adminNotes || '';
@@ -606,8 +622,17 @@ function showTransactionDetailsModal(transactionId) {
         return;
     }
 
-    // Populate transaction details
-    document.getElementById('detailTiktokUsername').textContent = transaction.tikTokUsername || 'N/A';
+    // Debug: Log the entire transaction object
+    console.log('[Dashboard] Transaction data for details:', transaction);
+    console.log('[Dashboard] TikTok username fields:', {
+        tikTokUsername: transaction.tikTokUsername,
+        'tiktok_username': transaction.tiktok_username,
+        'TikTokUsername': transaction.TikTokUsername
+    });
+
+    // Populate transaction details - check multiple possible field names
+    const tiktokUsername = transaction.tikTokUsername || transaction.tiktok_username || transaction.TikTokUsername || 'N/A';
+    document.getElementById('detailTiktokUsername').textContent = tiktokUsername;
     document.getElementById('detailLineDisplayName').textContent = transaction.lineDisplayName || 'N/A';
     document.getElementById('detailAmount').textContent = transaction.amount ? `฿${transaction.amount}` : 'N/A';
     document.getElementById('detailUploadType').textContent = transaction.uploadType || 'N/A';
@@ -972,6 +997,393 @@ function handleGalleryKeyboard(event) {
             toggleZoom();
             break;
     }
+}
+
+// =================================
+// PAYMENT METHODS MANAGEMENT
+// =================================
+
+let paymentMethods = [];
+let editingPaymentMethod = null;
+
+/**
+ * Initialize payment methods management when dashboard is ready
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    // Setup payment methods event listeners
+    setupPaymentMethodsEventListeners();
+
+    // Load payment methods when Firebase is ready
+    setTimeout(loadPaymentMethodsForAdmin, 1000);
+});
+
+/**
+ * Setup event listeners for payment methods management
+ */
+function setupPaymentMethodsEventListeners() {
+    // QR code image preview
+    const qrInput = document.getElementById('paymentMethodQR');
+    if (qrInput) {
+        qrInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const preview = document.getElementById('qrPreviewImage');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+}
+
+/**
+ * Load payment methods for admin interface
+ */
+async function loadPaymentMethodsForAdmin() {
+    try {
+        console.log('[Dashboard] Loading payment methods for admin...');
+
+        if (typeof getFirebaseFirestore !== 'function') {
+            console.error('[Dashboard] Firebase Firestore not available');
+            return;
+        }
+
+        const db = getFirebaseFirestore();
+        const snapshot = await db.collection('paymentMethods')
+            .orderBy('displayOrder', 'asc')
+            .get();
+
+        paymentMethods = [];
+        snapshot.forEach(doc => {
+            paymentMethods.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
+
+        console.log(`[Dashboard] Loaded ${paymentMethods.length} payment methods`);
+
+        // Update payment methods display
+        updatePaymentMethodsDisplay();
+
+    } catch (error) {
+        console.error('[Dashboard] Error loading payment methods:', error);
+        const container = document.getElementById('paymentMethodsContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="payment-method-error">
+                    Failed to load payment methods: ${error.message}
+                </div>
+            `;
+        }
+    }
+}
+
+/**
+ * Update payment methods display in admin dashboard
+ */
+function updatePaymentMethodsDisplay() {
+    const container = document.getElementById('paymentMethodsContainer');
+    if (!container) return;
+
+    if (!paymentMethods.length) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <h3>📱 No Payment Methods</h3>
+                <p>Click "Add Payment Method" to create your first payment method.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const html = paymentMethods.map(method => {
+        const typeIcons = {
+            'promptpay': '💳',
+            'bank_transfer': '🏦',
+            'true_wallet': '💙',
+            'line_pay': '💚',
+            'other': '💰'
+        };
+
+        const icon = typeIcons[method.type] || '💰';
+        const statusBadge = method.isActive ?
+            '<span class="status-badge verified">Active</span>' :
+            '<span class="status-badge pending">Inactive</span>';
+
+        return `
+            <div class="transaction-card ${method.isActive ? 'verified' : 'pending'}">
+                <div class="transaction-header">
+                    <div class="transaction-user compact">
+                        <div class="user-avatar compact">${icon}</div>
+                        <div class="user-info compact">
+                            <h3>${method.name}</h3>
+                            <p>${method.type.replace('_', ' ')} • Order: ${method.displayOrder || 0}</p>
+                        </div>
+                    </div>
+                    <div class="transaction-amount compact">
+                        ${statusBadge}
+                    </div>
+                </div>
+
+                <div class="transaction-details compact">
+                    <div class="detail-item">
+                        <span class="detail-label">Account</span>
+                        <span class="detail-value">${method.accountNumber || '-'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Name</span>
+                        <span class="detail-value">${method.accountName || '-'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">QR Code</span>
+                        <span class="detail-value">${method.imageUrl ? '✅ Uploaded' : '❌ Missing'}</span>
+                    </div>
+                </div>
+
+                <div class="transaction-actions compact">
+                    <button class="action-button compact edit" onclick="editPaymentMethod('${method.id}')" title="Edit">
+                        ✏️
+                    </button>
+                    <button class="action-button compact ${method.isActive ? 'reject' : 'approve'}"
+                            onclick="togglePaymentMethodStatus('${method.id}')"
+                            title="${method.isActive ? 'Deactivate' : 'Activate'}">
+                        ${method.isActive ? '⏸️' : '▶️'}
+                    </button>
+                    <button class="action-button compact view" onclick="viewPaymentMethod('${method.id}')" title="View QR Code">
+                        👁️
+                    </button>
+                    <button class="action-button compact reject" onclick="deletePaymentMethod('${method.id}')" title="Delete">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = html;
+}
+
+/**
+ * Open payment method modal for adding new payment method
+ */
+function openPaymentMethodModal() {
+    editingPaymentMethod = null;
+    document.getElementById('paymentMethodModalTitle').textContent = '➕ Add Payment Method';
+    document.getElementById('paymentMethodForm').reset();
+    document.getElementById('paymentMethodId').value = '';
+    document.getElementById('qrPreviewImage').style.display = 'none';
+    document.getElementById('paymentMethodModal').style.display = 'flex';
+}
+
+/**
+ * Open payment method modal for editing existing payment method
+ */
+function editPaymentMethod(id) {
+    const method = paymentMethods.find(m => m.id === id);
+    if (!method) {
+        console.error('[Dashboard] Payment method not found:', id);
+        return;
+    }
+
+    editingPaymentMethod = method;
+    document.getElementById('paymentMethodModalTitle').textContent = '✏️ Edit Payment Method';
+    document.getElementById('paymentMethodId').value = method.id;
+    document.getElementById('paymentMethodName').value = method.name || '';
+    document.getElementById('paymentMethodType').value = method.type || 'promptpay';
+    document.getElementById('paymentMethodDescription').value = method.description || '';
+    document.getElementById('paymentMethodAccountNumber').value = method.accountNumber || '';
+    document.getElementById('paymentMethodAccountName').value = method.accountName || '';
+    document.getElementById('paymentMethodDisplayOrder').value = method.displayOrder || 0;
+    document.getElementById('paymentMethodActive').checked = method.isActive !== false;
+
+    // Show existing QR code if available
+    const preview = document.getElementById('qrPreviewImage');
+    if (method.imageUrl) {
+        preview.src = method.imageUrl;
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+
+    document.getElementById('paymentMethodQR').required = false; // Not required when editing
+    document.getElementById('paymentMethodModal').style.display = 'flex';
+}
+
+/**
+ * Close payment method modal
+ */
+function closePaymentMethodModal() {
+    document.getElementById('paymentMethodModal').style.display = 'none';
+    document.getElementById('paymentMethodForm').reset();
+    editingPaymentMethod = null;
+}
+
+/**
+ * Save payment method (create or update)
+ */
+async function savePaymentMethod(event) {
+    event.preventDefault();
+
+    try {
+        const formData = {
+            name: document.getElementById('paymentMethodName').value.trim(),
+            type: document.getElementById('paymentMethodType').value,
+            description: document.getElementById('paymentMethodDescription').value.trim(),
+            accountNumber: document.getElementById('paymentMethodAccountNumber').value.trim(),
+            accountName: document.getElementById('paymentMethodAccountName').value.trim(),
+            displayOrder: parseInt(document.getElementById('paymentMethodDisplayOrder').value) || 0,
+            isActive: document.getElementById('paymentMethodActive').checked
+        };
+
+        const paymentMethodId = document.getElementById('paymentMethodId').value;
+        const qrFile = document.getElementById('paymentMethodQR').files[0];
+
+        // Validate required fields
+        if (!formData.name) {
+            alert('Payment method name is required');
+            return;
+        }
+
+        let imageUrl = editingPaymentMethod?.imageUrl || '';
+
+        // Upload QR code if provided
+        if (qrFile) {
+            if (typeof uploadQRCode === 'function') {
+                imageUrl = await uploadQRCode(qrFile, paymentMethodId || 'temp');
+            } else {
+                // Fallback upload function
+                const storage = getFirebaseStorage();
+                if (!storage) {
+                    throw new Error('Firebase Storage is not initialized');
+                }
+
+                const storageRef = storage.ref();
+                const qrCodeRef = storageRef.child(`payment-methods/${paymentMethodId || Date.now()}/qr-code.png`);
+                await qrCodeRef.put(qrFile);
+                imageUrl = await qrCodeRef.getDownloadURL();
+            }
+        } else if (!paymentMethodId) {
+            // New payment method without QR code
+            alert('QR code image is required for new payment methods');
+            return;
+        }
+
+        const paymentMethodData = {
+            ...formData,
+            imageUrl: imageUrl
+        };
+
+        if (paymentMethodId) {
+            // Update existing payment method
+            await updatePaymentMethodInDB(paymentMethodId, paymentMethodData);
+            showNotification('Payment method updated successfully', 'success');
+        } else {
+            // Create new payment method
+            await createPaymentMethodInDB(paymentMethodData);
+            showNotification('Payment method created successfully', 'success');
+        }
+
+        // Reload payment methods
+        await loadPaymentMethodsForAdmin();
+
+        // Close modal
+        closePaymentMethodModal();
+
+    } catch (error) {
+        console.error('[Dashboard] Error saving payment method:', error);
+        alert('Error saving payment method: ' + error.message);
+    }
+}
+
+/**
+ * Create payment method in database
+ */
+async function createPaymentMethodInDB(paymentMethodData) {
+    const db = getFirebaseFirestore();
+    const docRef = await db.collection('paymentMethods').add({
+        ...paymentMethodData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+    });
+
+    console.log('[Dashboard] Payment method created with ID:', docRef.id);
+    return docRef.id;
+}
+
+/**
+ * Update payment method in database
+ */
+async function updatePaymentMethodInDB(id, paymentMethodData) {
+    const db = getFirebaseFirestore();
+    await db.collection('paymentMethods').doc(id).update({
+        ...paymentMethodData,
+        updatedAt: new Date()
+    });
+
+    console.log('[Dashboard] Payment method updated:', id);
+}
+
+/**
+ * Toggle payment method active status
+ */
+async function togglePaymentMethodStatus(id) {
+    try {
+        const method = paymentMethods.find(m => m.id === id);
+        if (!method) return;
+
+        const newStatus = !method.isActive;
+
+        await updatePaymentMethodInDB(id, { isActive: newStatus });
+
+        showNotification(`Payment method ${newStatus ? 'activated' : 'deactivated'}`, 'success');
+
+        // Reload payment methods
+        await loadPaymentMethodsForAdmin();
+
+    } catch (error) {
+        console.error('[Dashboard] Error toggling payment method status:', error);
+        alert('Error updating payment method status: ' + error.message);
+    }
+}
+
+/**
+ * Delete payment method
+ */
+async function deletePaymentMethod(id) {
+    if (!confirm('Are you sure you want to delete this payment method? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const db = getFirebaseFirestore();
+        await db.collection('paymentMethods').doc(id).delete();
+
+        showNotification('Payment method deleted successfully', 'success');
+
+        // Reload payment methods
+        await loadPaymentMethodsForAdmin();
+
+    } catch (error) {
+        console.error('[Dashboard] Error deleting payment method:', error);
+        alert('Error deleting payment method: ' + error.message);
+    }
+}
+
+/**
+ * View payment method QR code
+ */
+function viewPaymentMethod(id) {
+    const method = paymentMethods.find(m => m.id === id);
+    if (!method || !method.imageUrl) {
+        alert('No QR code available for this payment method');
+        return;
+    }
+
+    // Open QR code in a modal or new window
+    window.open(method.imageUrl, '_blank');
 }
 
 

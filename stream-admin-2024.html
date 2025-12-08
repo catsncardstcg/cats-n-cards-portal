@@ -150,7 +150,7 @@
         .transaction-card {
             background: white;
             border-radius: 12px;
-            padding: 20px;
+            padding: 12px;
             margin-bottom: 15px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             border-left: 5px solid #667eea;
@@ -189,17 +189,184 @@
             }
         }
 
+        /* Compact transaction card styles */
+        .transaction-card {
+            min-height: 120px;
+        }
+
         .transaction-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+        }
+
+        .transaction-header .compact {
+            align-items: center;
+        }
+
+        .user-avatar.compact {
+            width: 32px;
+            height: 32px;
+            font-size: 0.9em;
+            flex-shrink: 0;
+        }
+
+        .user-info.compact h3 {
+            margin: 0;
+            font-size: 0.95em;
+            color: #333;
+            line-height: 1.3;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .transaction-amount.compact {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .amount-text {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        .transaction-details.compact {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .transaction-details.compact .detail-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 0.85em;
+        }
+
+        .transaction-details.compact .detail-value {
+            font-weight: 500;
+        }
+
+        .status-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.verified {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.verifying {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-badge.failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .transaction-actions.compact {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .action-button.compact {
+            flex: none;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-button.compact:hover {
+            transform: scale(1.1);
+        }
+
+        .action-button.compact.approve {
+            background: #4caf50;
+            color: white;
+        }
+
+        .action-button.compact.reject {
+            background: #f44336;
+            color: white;
+        }
+
+        .action-button.compact.view {
+            background: #2196f3;
+            color: white;
+        }
+
+        .action-button.compact.edit {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+            .transaction-card {
+                padding: 12px;
+                min-height: 110px;
+            }
+
+            .user-info.compact h3 {
+                max-width: 150px;
+                font-size: 0.9em;
+            }
+
+            .transaction-details.compact {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .transaction-actions.compact {
+                gap: 4px;
+            }
+
+            .action-button.compact {
+                width: 30px;
+                height: 30px;
+                font-size: 14px;
+            }
         }
 
         .transaction-user {
             display: flex;
             align-items: center;
             gap: 15px;
+        }
+
+        .transaction-user.compact {
+            gap: 10px;
         }
 
         .user-avatar {
@@ -941,6 +1108,24 @@
             </div>
         </div>
 
+        <!-- Payment Methods Management Section -->
+        <div class="controls" style="margin-bottom: 30px;">
+            <div class="filter-group">
+                <h3 style="margin: 0; color: #333;">💳 Payment Methods Management</h3>
+                <button class="filter-button" onclick="openPaymentMethodModal()" style="background: #4caf50; color: white;">
+                    + Add Payment Method
+                </button>
+            </div>
+        </div>
+
+        <!-- Payment Methods Container -->
+        <div class="transactions-container" id="paymentMethodsContainer" style="max-height: 400px; margin-bottom: 30px;">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Loading payment methods...</p>
+            </div>
+        </div>
+
         <div class="transactions-container" id="transactionsContainer">
             <div class="loading-spinner">
                 <div class="spinner"></div>
@@ -1086,6 +1271,77 @@
                   </div>
     </div>
 
+    <!-- Payment Method Modal -->
+    <div id="paymentMethodModal" class="edit-modal" onclick="if(event.target === this) closePaymentMethodModal()">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 id="paymentMethodModalTitle">➕ Add Payment Method</h3>
+            </div>
+
+            <form id="paymentMethodForm" onsubmit="savePaymentMethod(event)">
+                <div class="form-group">
+                    <label for="paymentMethodName">Payment Method Name *</label>
+                    <input type="text" id="paymentMethodName" placeholder="e.g., PromptPay - นทีธาร" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="paymentMethodType">Payment Type *</label>
+                    <select id="paymentMethodType" required>
+                        <option value="promptpay">PromptPay</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="true_wallet">TrueWallet</option>
+                        <option value="line_pay">LINE Pay</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="paymentMethodDescription">Description</label>
+                    <input type="text" id="paymentMethodDescription" placeholder="e.g., PromptPay: นทีธาร ปัญญากร">
+                </div>
+
+                <div class="form-group">
+                    <label for="paymentMethodAccountNumber">Account Number</label>
+                    <input type="text" id="paymentMethodAccountNumber" placeholder="e.g., 081-234-5678">
+                </div>
+
+                <div class="form-group">
+                    <label for="paymentMethodAccountName">Account Name</label>
+                    <input type="text" id="paymentMethodAccountName" placeholder="e.g., นทีธาร ปัญญากร">
+                </div>
+
+                <div class="form-group">
+                    <label for="paymentMethodQR">QR Code Image *</label>
+                    <input type="file" id="paymentMethodQR" accept="image/*" required>
+                    <div id="qrPreview" style="margin-top: 10px; text-align: center;">
+                        <img id="qrPreviewImage" style="max-width: 200px; max-height: 200px; display: none; border-radius: 8px; border: 2px solid #e0e0e0;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="paymentMethodDisplayOrder">Display Order</label>
+                    <input type="number" id="paymentMethodDisplayOrder" placeholder="0" min="0" value="0">
+                    <small style="color: #666; display: block; margin-top: 5px;">Lower numbers appear first</small>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="paymentMethodActive" checked>
+                        <span>Active</span>
+                    </label>
+                    <small style="color: #666; display: block; margin-top: 5px;">Only active payment methods will be shown to customers</small>
+                </div>
+
+                <input type="hidden" id="paymentMethodId" value="">
+
+                <div class="modal-actions">
+                    <button type="button" class="modal-button cancel" onclick="closePaymentMethodModal()">Cancel</button>
+                    <button type="submit" class="modal-button save">💾 Save Payment Method</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -1093,5 +1349,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="js/dashboard.js"></script>
+    <script src="js/payment-methods.js"></script>
 </body>
 </html>
