@@ -229,6 +229,39 @@
             font-size: 1.5em;
             font-weight: bold;
             color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .verification-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .verification-badge.match {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .verification-badge.mismatch {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .verification-badge.no-data {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
         }
 
         .transaction-details {
@@ -686,7 +719,27 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            padding: 80px 20px 120px;
+            padding: 80px 20px 60px;
+        }
+
+        .gallery-content {
+            position: relative;
+            width: 90vw;
+            height: 80vh;
+            max-width: 1200px;
+            max-height: 800px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .main-image-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .gallery-image-container {
@@ -701,6 +754,8 @@
         .gallery-image {
             max-width: 100%;
             max-height: 100%;
+            width: auto;
+            height: auto;
             object-fit: contain;
             border-radius: 8px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.5);
@@ -750,41 +805,7 @@
             cursor: not-allowed;
         }
 
-        .gallery-thumbnails {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-            padding: 20px;
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            z-index: 10;
-        }
-
-        .gallery-thumbnail {
-            flex-shrink: 0;
-            width: 80px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 4px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: all 0.3s ease;
-            opacity: 0.7;
-        }
-
-        .gallery-thumbnail:hover {
-            opacity: 1;
-            transform: scale(1.05);
-        }
-
-        .gallery-thumbnail.active {
-            border-color: #667eea;
-            opacity: 1;
-        }
-
+    
         .gallery-controls {
             position: absolute;
             bottom: 90px;
@@ -811,18 +832,7 @@
             transform: translateY(-2px);
         }
 
-        .gallery-info {
-            position: absolute;
-            top: 80px;
-            left: 20px;
-            color: white;
-            font-size: 0.9em;
-            z-index: 10;
-            background: rgba(0,0,0,0.5);
-            padding: 10px 15px;
-            border-radius: 20px;
-        }
-
+      
         /* Mobile Responsive Styles */
         @media (max-width: 768px) {
             .gallery-nav {
@@ -839,11 +849,7 @@
                 right: 10px;
             }
 
-            .gallery-thumbnail {
-                width: 60px;
-                height: 45px;
-            }
-
+      
             .gallery-controls {
                 bottom: 80px;
             }
@@ -1058,14 +1064,15 @@
                 <button class="gallery-close" onclick="closeGalleryModal()">×</button>
             </div>
 
-            <div class="gallery-info" id="galleryInfo">
-                <span id="galleryImageCounter">1 / 1</span>
-            </div>
-
+            
             <div class="gallery-main">
                 <button class="gallery-nav prev" id="galleryPrev" onclick="navigateGallery('prev')">‹</button>
-                <div class="gallery-image-container">
-                    <img id="galleryMainImage" class="gallery-image" src="" alt="Receipt" onclick="toggleZoom()">
+                <div class="gallery-content">
+                    <div class="main-image-container">
+                        <div class="gallery-image-container">
+                            <img id="galleryMainImage" class="gallery-image" src="" alt="Receipt" onclick="toggleZoom()">
+                        </div>
+                    </div>
                 </div>
                 <button class="gallery-nav next" id="galleryNext" onclick="navigateGallery('next')">›</button>
             </div>
@@ -1076,10 +1083,7 @@
                 <button class="gallery-control-btn" onclick="resetZoom()">🔄 Reset</button>
             </div>
 
-            <div class="gallery-thumbnails" id="galleryThumbnails">
-                <!-- Thumbnails will be dynamically added here -->
-            </div>
-        </div>
+                  </div>
     </div>
 
     <!-- Firebase SDK -->

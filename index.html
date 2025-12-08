@@ -259,33 +259,7 @@
     <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
     <script defer src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
-    <!-- Diagnostic: Check if Firebase loaded (NO defer - runs immediately) -->
-    <script>
-        console.log('[DIAGNOSTIC] Script executing NOW');
-
-        function showFirebaseDiagnostic() {
-            var firebaseSDK = typeof firebase;
-            var configLoaded = typeof isFirebaseReady === 'function';
-
-            console.log('[DIAGNOSTIC] Firebase SDK:', firebaseSDK);
-            console.log('[DIAGNOSTIC] Config loaded:', configLoaded);
-
-            // Create visible banner at top of page
-            var banner = document.createElement('div');
-            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#000;color:#fff;padding:8px;z-index:999999;font-size:11px;font-family:monospace;border-bottom:2px solid #f00;';
-            banner.innerHTML = '<b>🔍 FIREBASE DEBUG:</b><br>' +
-                'SDK (CDN): ' + firebaseSDK + (firebaseSDK === 'undefined' ? ' ❌' : ' ✅') + '<br>' +
-                'Config.js: ' + (configLoaded ? '✅ LOADED' : '❌ NOT LOADED');
-
-            document.body.insertBefore(banner, document.body.firstChild);
-        }
-
-        // Wait for DOM and deferred scripts to load
-        window.addEventListener('load', function() {
-            setTimeout(showFirebaseDiagnostic, 2000); // Wait 2s after page load
-        });
-    </script>
-
+  
     <!-- Firebase Configuration -->
     <script defer src="firebase-config.js"></script>
 

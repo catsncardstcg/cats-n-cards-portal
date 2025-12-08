@@ -254,6 +254,42 @@ function updateTransactionDisplay() {
 }
 
 /**
+ * Get verification badge HTML for transaction
+ */
+function getVerificationBadge(transaction) {
+    // Check if Thunder API data is available
+    if (!transaction.thunderResult || !transaction.thunderResult.sender || !transaction.thunderResult.sender.account) {
+        return `<span class="verification-badge no-data">⚠️ No Data</span>`;
+    }
+
+    // Extract sender name from Thunder API
+    const thunderSenderName = transaction.thunderResult.sender.account.name.th ||
+                              transaction.thunderResult.sender.account.name.en ||
+                              '';
+
+    // Get expected recipient (LINE display name)
+    const expectedRecipient = transaction.lineDisplayName || '';
+
+    // If no sender name or no expected recipient, show warning
+    if (!thunderSenderName || !expectedRecipient) {
+        return `<span class="verification-badge no-data">⚠️ No Data</span>`;
+    }
+
+    // Compare names (case-insensitive, partial matching)
+    const senderName = thunderSenderName.toLowerCase().trim();
+    const expected = expectedRecipient.toLowerCase().trim();
+
+    // Check for partial match (sender name contains expected or vice versa)
+    const isMatch = senderName.includes(expected) || expected.includes(senderName);
+
+    if (isMatch) {
+        return `<span class="verification-badge match">✅ Match</span>`;
+    } else {
+        return `<span class="verification-badge mismatch">❌ Mismatch</span>`;
+    }
+}
+
+/**
  * Create transaction card element
  */
 function createTransactionCard(transaction) {
@@ -269,6 +305,9 @@ function createTransactionCard(transaction) {
     // Get user initials for avatar
     const initials = getUserInitials(transaction.lineDisplayName || transaction.tikTokUsername);
 
+    // Get verification badge
+    const verificationBadge = getVerificationBadge(transaction);
+
     card.innerHTML = `
         <div class="transaction-header">
             <div class="transaction-user">
@@ -278,7 +317,10 @@ function createTransactionCard(transaction) {
                     <p>${transaction.lineDisplayName || 'No display name'}</p>
                 </div>
             </div>
-            <div class="transaction-amount">${amount}</div>
+            <div class="transaction-amount">
+                ${amount}
+                ${verificationBadge}
+            </div>
         </div>
 
         <div class="transaction-details">
@@ -773,32 +815,22 @@ function showImageGalleryModal(imageUrl, tiktokUsername, lineDisplayName) {
     // Initialize gallery with current image
     const username = lineDisplayName || tiktokUsername || 'Unknown User';
 
-    // Collect all receipts from current user across transactions
-    const userImages = collectUserReceiptImages(tiktokUsername, lineDisplayName);
+    // Show single image instead of gallery
+    galleryData.images = [{
+        url: imageUrl,
+        username: username,
+        transactionId: 'single-image',
+        uploadedAt: new Date()
+    }];
 
-    // If no images found, use the current image
-    if (userImages.length === 0 && imageUrl) {
-        userImages.push({
-            url: imageUrl,
-            username: username,
-            transactionId: 'unknown',
-            uploadedAt: new Date()
-        });
-    }
-
-    galleryData.images = userImages;
-
-    // Find current image index
-    galleryData.currentIndex = userImages.findIndex(img => img.url === imageUrl);
-    if (galleryData.currentIndex === -1) {
-        galleryData.currentIndex = 0;
-    }
+    galleryData.currentIndex = 0;
 
     // Update gallery title
-    document.getElementById('galleryTitle').textContent = `${username}'s Receipts`;
+    document.getElementById('galleryTitle').textContent = `${username}'s Receipt`;
 
-    // Generate thumbnails
-    generateThumbnails();
+    // Hide navigation buttons since we only have one image
+    document.getElementById('galleryPrev').style.display = 'none';
+    document.getElementById('galleryNext').style.display = 'none';
 
     // Display current image
     displayCurrentImage();
@@ -809,7 +841,7 @@ function showImageGalleryModal(imageUrl, tiktokUsername, lineDisplayName) {
     // Add event listeners
     setupGalleryEventListeners();
 
-    console.log(`[Gallery] Opened gallery with ${userImages.length} images for ${username}`);
+    console.log(`[Gallery] Opened single image gallery for ${username}`);
 }
 
 /**
@@ -841,30 +873,6 @@ function collectUserReceiptImages(tiktokUsername, lineDisplayName) {
     return userImages;
 }
 
-/**
- * Generate thumbnails for gallery
- */
-function generateThumbnails() {
-    const container = document.getElementById('galleryThumbnails');
-    container.innerHTML = '';
-
-    galleryData.images.forEach((image, index) => {
-        const thumbnail = document.createElement('img');
-        thumbnail.src = image.url;
-        thumbnail.className = 'gallery-thumbnail';
-        thumbnail.alt = `Receipt ${index + 1}`;
-
-        if (index === galleryData.currentIndex) {
-            thumbnail.classList.add('active');
-        }
-
-        thumbnail.onclick = () => jumpToImage(index);
-        container.appendChild(thumbnail);
-    });
-
-    // Scroll to active thumbnail
-    scrollToActiveThumbnail();
-}
 
 /**
  * Display current image in gallery
@@ -874,75 +882,16 @@ function displayCurrentImage() {
 
     const currentImage = galleryData.images[galleryData.currentIndex];
     const mainImage = document.getElementById('galleryMainImage');
-    const counter = document.getElementById('galleryImageCounter');
 
     mainImage.src = currentImage.url;
-    counter.textContent = `${galleryData.currentIndex + 1} / ${galleryData.images.length}`;
-
-    // Update navigation buttons
-    document.getElementById('galleryPrev').disabled = galleryData.currentIndex === 0;
-    document.getElementById('galleryNext').disabled = galleryData.currentIndex === galleryData.images.length - 1;
-
-    // Update thumbnail active state
-    updateThumbnailActiveState();
 
     // Reset zoom
     resetZoom();
 }
 
-/**
- * Navigate gallery (previous/next)
- */
-function navigateGallery(direction) {
-    if (direction === 'prev' && galleryData.currentIndex > 0) {
-        galleryData.currentIndex--;
-    } else if (direction === 'next' && galleryData.currentIndex < galleryData.images.length - 1) {
-        galleryData.currentIndex++;
-    }
 
-    displayCurrentImage();
-}
 
-/**
- * Jump to specific image by index
- */
-function jumpToImage(index) {
-    if (index >= 0 && index < galleryData.images.length) {
-        galleryData.currentIndex = index;
-        displayCurrentImage();
-        scrollToActiveThumbnail();
-    }
-}
 
-/**
- * Update thumbnail active state
- */
-function updateThumbnailActiveState() {
-    const thumbnails = document.querySelectorAll('.gallery-thumbnail');
-    thumbnails.forEach((thumbnail, index) => {
-        if (index === galleryData.currentIndex) {
-            thumbnail.classList.add('active');
-        } else {
-            thumbnail.classList.remove('active');
-        }
-    });
-}
-
-/**
- * Scroll to active thumbnail
- */
-function scrollToActiveThumbnail() {
-    const container = document.getElementById('galleryThumbnails');
-    const activeThumbnail = container.querySelector('.gallery-thumbnail.active');
-
-    if (activeThumbnail) {
-        activeThumbnail.scrollIntoView({
-            behavior: 'smooth',
-            inline: 'center',
-            block: 'nearest'
-        });
-    }
-}
 
 /**
  * Toggle zoom on main image
@@ -1000,11 +949,6 @@ function closeGalleryModal() {
 function setupGalleryEventListeners() {
     // Keyboard navigation
     document.addEventListener('keydown', handleGalleryKeyboard);
-
-    // Touch events for mobile swipe
-    const mainImage = document.getElementById('galleryMainImage');
-    mainImage.addEventListener('touchstart', handleTouchStart, { passive: true });
-    mainImage.addEventListener('touchend', handleTouchEnd, { passive: true });
 }
 
 /**
@@ -1012,10 +956,6 @@ function setupGalleryEventListeners() {
  */
 function removeGalleryEventListeners() {
     document.removeEventListener('keydown', handleGalleryKeyboard);
-
-    const mainImage = document.getElementById('galleryMainImage');
-    mainImage.removeEventListener('touchstart', handleTouchStart);
-    mainImage.removeEventListener('touchend', handleTouchEnd);
 }
 
 /**
@@ -1023,14 +963,6 @@ function removeGalleryEventListeners() {
  */
 function handleGalleryKeyboard(event) {
     switch (event.key) {
-        case 'ArrowLeft':
-            event.preventDefault();
-            navigateGallery('prev');
-            break;
-        case 'ArrowRight':
-            event.preventDefault();
-            navigateGallery('next');
-            break;
         case 'Escape':
             closeGalleryModal();
             break;
@@ -1042,35 +974,4 @@ function handleGalleryKeyboard(event) {
     }
 }
 
-/**
- * Handle touch start for swipe detection
- */
-function handleTouchStart(event) {
-    galleryData.touchStartX = event.touches[0].clientX;
-}
 
-/**
- * Handle touch end for swipe detection
- */
-function handleTouchEnd(event) {
-    galleryData.touchEndX = event.changedTouches[0].clientX;
-    handleSwipe();
-}
-
-/**
- * Handle swipe gesture
- */
-function handleSwipe() {
-    const swipeThreshold = 50;
-    const diff = galleryData.touchStartX - galleryData.touchEndX;
-
-    if (Math.abs(diff) > swipeThreshold) {
-        if (diff > 0) {
-            // Swipe left - next image
-            navigateGallery('next');
-        } else {
-            // Swipe right - previous image
-            navigateGallery('prev');
-        }
-    }
-}
