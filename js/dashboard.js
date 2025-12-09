@@ -107,6 +107,12 @@ function initializeDashboard() {
     // Setup event listeners
     setupEventListeners();
 
+    // Clear loading spinners immediately
+    const cardContainer = document.getElementById('transactionsContainer');
+    if (cardContainer) {
+        cardContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading transactions...</p></div>';
+    }
+
     // Load payment methods for streamer name verification
     loadPaymentMethodsForVerification();
 
@@ -137,12 +143,13 @@ function setupEventListeners() {
         });
     });
 
-    // Search box
+    // Search box - temporarily disabled to debug loading issues
     const searchBox = document.getElementById('searchBox');
     if (searchBox) {
         searchBox.addEventListener('input', (e) => {
-            searchQuery = e.target.value.toLowerCase();
-            updateTransactionDisplay();
+            console.log('[Dashboard] Search input temporarily disabled');
+            // searchQuery = e.target.value.toLowerCase();
+            // updateTransactionDisplay();
         });
     }
 
@@ -164,6 +171,22 @@ function startRealtimeMonitoring() {
     unsubscribe = receiptsQuery.onSnapshot(
         (snapshot) => {
             console.log(`[Dashboard] Received ${snapshot.docChanges().length} changes`);
+
+            // If this is the initial load, clear existing transactions
+            if (snapshot.metadata.hasPendingWrites === false && snapshot.docChanges().length === 0) {
+                console.log('[Dashboard] Initial load - checking for existing transactions');
+                transactions = [];
+                snapshot.forEach(doc => {
+                    const transaction = {
+                        id: doc.id,
+                        ...doc.data()
+                    };
+                    transactions.push(transaction);
+                });
+                updateTransactionDisplay();
+                updateStatistics();
+                return;
+            }
 
             // Process document changes
             snapshot.docChanges().forEach((change) => {
@@ -201,6 +224,17 @@ function startRealtimeMonitoring() {
     );
 
     console.log('[Dashboard] Real-time monitoring started');
+
+    // Failsafe: If no transactions load after 10 seconds, show empty state
+    setTimeout(() => {
+        if (transactions.length === 0) {
+            console.log('[Dashboard] No transactions loaded after timeout - showing empty state');
+            const cardContainer = document.getElementById('transactionsContainer');
+            if (cardContainer) {
+                showEmptyState(cardContainer);
+            }
+        }
+    }, 10000);
 }
 
 /**
@@ -279,10 +313,24 @@ function updateStatistics() {
  * Update transaction display based on current filter and search
  */
 function updateTransactionDisplay() {
-    // Update card view
-    const cardContainer = document.getElementById('transactionsContainer');
-    if (cardContainer) {
-        const filteredTransactions = getFilteredTransactions();
+    try {
+        console.log('[Dashboard] updateTransactionDisplay called');
+
+        // Use the original simple filtering to avoid breaking existing functionality
+        const cardContainer = document.getElementById('transactionsContainer');
+        if (!cardContainer) return;
+
+        // Simple filter based on current filter only (ignore search for now to debug)
+        let filteredTransactions = transactions;
+
+        if (currentFilter !== 'all') {
+            filteredTransactions = transactions.filter(transaction => {
+                const status = transaction.verificationStatus || transaction.status || 'pending';
+                return status === currentFilter;
+            });
+        }
+
+        console.log(`[Dashboard] Simple filter: ${transactions.length} total -> ${filteredTransactions.length} filtered`);
 
         // Clear loading spinner
         cardContainer.innerHTML = '';
@@ -296,15 +344,20 @@ function updateTransactionDisplay() {
                 cardContainer.appendChild(transactionCard);
             });
         }
-    }
 
-    // Update table view if active
-    if (viewMode === 'table') {
-        generateTransactionTable();
-    }
+        // Update table view if active
+        if (viewMode === 'table') {
+            generateTransactionTable();
+        }
 
-    const filteredTransactions = getFilteredTransactions();
-    console.log(`[Dashboard] Displayed ${filteredTransactions.length} transactions in ${viewMode} view`);
+        console.log(`[Dashboard] Displayed ${filteredTransactions.length} transactions in ${viewMode} view`);
+    } catch (error) {
+        console.error('[Dashboard] Error in updateTransactionDisplay:', error);
+        const cardContainer = document.getElementById('transactionsContainer');
+        if (cardContainer) {
+            cardContainer.innerHTML = '<div style="color: red; padding: 20px;">Error loading transactions. Please check console.</div>';
+        }
+    }
 }
 
 /**
@@ -1462,7 +1515,8 @@ function viewPaymentMethod(id) {
  * Toggle between card view and table view
  * @param {string} mode - View mode ('cards' or 'table')
  */
-function toggleViewMode(mode) {
+// Make toggleViewMode globally accessible
+window.toggleViewMode = function(mode) {
     console.log(`[Dashboard] toggleViewMode called with mode: ${mode}, current mode: ${viewMode}`);
 
     if (viewMode === mode) {
