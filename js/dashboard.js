@@ -75,10 +75,7 @@ function getTransactionStatus(transaction) {
  * @returns {string} TikTok username
  */
 function getTikTokUsername(transaction) {
-    return transaction.tikTokUsername ||
-           transaction.tiktok_username ||
-           transaction.TikTokUsername ||
-           '';
+    return transaction.tiktokUsername || '';
 }
 
 // Initialize dashboard when DOM is ready
@@ -529,8 +526,9 @@ function createTransactionCard(transaction) {
     // Get verification badge
     const verificationBadge = getVerificationBadge(transaction);
 
-    // Debug: Log username fields for this transaction
+    // Debug: Log ALL available fields to find the correct TikTok username field
     if (transaction.id) {
+        console.log(`[Dashboard] Transaction ${transaction.id} ALL FIELDS:`, transaction);
         console.log(`[Dashboard] Transaction ${transaction.id} username fields:`, {
             tikTokUsername: transaction.tikTokUsername,
             'tiktok_username': transaction.tiktok_username,
