@@ -23,10 +23,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Wait for Firebase to be ready
+    console.log('[Dashboard] Waiting for Firebase to be ready...');
+    console.log('[Dashboard] isFirestoreReady function exists:', typeof isFirestoreReady);
+
     const initCheck = setInterval(() => {
         if (typeof isFirestoreReady === 'function' && isFirestoreReady()) {
+            console.log('[Dashboard] Firebase is ready!');
             clearInterval(initCheck);
             initializeDashboard();
+        } else {
+            console.log('[Dashboard] Firebase not ready yet, checking again...');
         }
     }, 100);
 
@@ -34,6 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         if (typeof isFirestoreReady !== 'function' || !isFirestoreReady()) {
             console.error('[Dashboard] Firebase initialization timeout');
+            console.error('[Dashboard] isFirestoreReady function:', typeof isFirestoreReady);
+            if (typeof isFirestoreReady === 'function') {
+                console.error('[Dashboard] isFirestoreReady() result:', isFirestoreReady());
+            }
             showError('Failed to initialize Firebase. Please refresh the page.');
         }
     }, 5000);
@@ -94,7 +104,15 @@ function initializeDashboard() {
     console.log('[Dashboard] Firebase ready, initializing dashboard...');
 
     // Get Firestore instance
-    db = getFirebaseFirestore();
+    console.log('[Dashboard] Getting Firestore instance...');
+    console.log('[Dashboard] getFirebaseFirestore function exists:', typeof getFirebaseFirestore);
+
+    try {
+        db = getFirebaseFirestore();
+        console.log('[Dashboard] Firestore instance result:', db);
+    } catch (error) {
+        console.error('[Dashboard] Error getting Firestore instance:', error);
+    }
 
     if (!db) {
         console.error('[Dashboard] Failed to get Firestore instance');
@@ -113,8 +131,8 @@ function initializeDashboard() {
         cardContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading transactions...</p></div>';
     }
 
-    // Load payment methods for streamer name verification
-    loadPaymentMethodsForVerification();
+    // Temporarily skip payment methods loading to debug transaction issues
+    console.log('[Dashboard] Skipping payment methods loading temporarily');
 
     // Start real-time transaction monitoring
     startRealtimeMonitoring();
