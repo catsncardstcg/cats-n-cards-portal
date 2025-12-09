@@ -21,6 +21,63 @@ const paymentMethods = window.paymentMethods;
 let viewMode = 'cards'; // 'cards' | 'table'
 let sortConfig = { field: 'uploadedAt', direction: 'desc' };
 
+// =================================
+// HELPER FUNCTIONS
+// =================================
+
+/**
+ * Format transaction date with proper Firestore timestamp handling
+ * @param {Object|Date} timestamp - Firestore timestamp or Date object
+ * @param {boolean} useRelativeTime - Return relative time if true
+ * @returns {string} Formatted date string
+ */
+function formatTransactionDate(timestamp, useRelativeTime = false) {
+    if (!timestamp) return 'Unknown';
+
+    try {
+        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+
+        if (isNaN(date.getTime())) {
+            return 'Invalid Date';
+        }
+
+        if (useRelativeTime) {
+            return getTimeAgo(date);
+        }
+
+        return date.toLocaleString('th-TH', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (error) {
+        console.error('Date formatting error:', error);
+        return 'Invalid Date';
+    }
+}
+
+/**
+ * Get transaction status with field standardization
+ * @param {Object} transaction - Transaction data
+ * @returns {string} Status value
+ */
+function getTransactionStatus(transaction) {
+    return transaction.status ||
+           transaction.verificationStatus ||
+           'pending';
+}
+
+/**
+ * Get TikTok username with field standardization
+ * @param {Object} transaction - Transaction data
+ * @returns {string} TikTok username
+ */
+function getTikTokUsername(transaction) {
+    return transaction.tiktokUsername || '';
+}
+
 // Initialize dashboard when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     console.log('[Dashboard] Initializing...');
@@ -275,11 +332,13 @@ function handleNewTransaction(transaction) {
     // Add new transaction at the beginning
     transactions.unshift(transaction);
 
-    console.log(`[Dashboard] New transaction: ${transaction.tikTokUsername} - ${transaction.status}`);
+    const tiktokUsername = getTikTokUsername(transaction);
+    const status = getTransactionStatus(transaction);
+    console.log(`[Dashboard] New transaction: ${tiktokUsername} - ${status}`);
 
     // Show notification for new pending transactions
-    if (transaction.status === 'pending') {
-        showNotification(`New receipt from ${transaction.tikTokUsername}`, 'info');
+    if (status === 'pending') {
+        showNotification(`New receipt from ${tiktokUsername}`, 'info');
     }
 }
 
@@ -290,23 +349,25 @@ function handleUpdatedTransaction(transaction) {
     const existingIndex = transactions.findIndex(t => t.id === transaction.id);
 
     if (existingIndex !== -1) {
-        const oldStatus = transactions[existingIndex].status;
+        const oldStatus = getTransactionStatus(transactions[existingIndex]);
+        const newStatus = getTransactionStatus(transaction);
         transactions[existingIndex] = transaction;
+        const tiktokUsername = getTikTokUsername(transaction);
 
         // Show notification for status changes
-        if (oldStatus !== transaction.status) {
+        if (oldStatus !== newStatus) {
             const statusMessages = {
                 'verified': '✅ Transaction verified',
                 'failed': '❌ Transaction failed',
                 'verifying': '⏳ Verifying transaction'
             };
 
-            const message = statusMessages[transaction.status] || `Status updated to ${transaction.status}`;
-            showNotification(`${transaction.tikTokUsername}: ${message}`,
-                             transaction.status === 'verified' ? 'success' : 'info');
+            const message = statusMessages[newStatus] || `Status updated to ${newStatus}`;
+            showNotification(`${tiktokUsername}: ${message}`,
+                             newStatus === 'verified' ? 'success' : 'info');
         }
 
-        console.log(`[Dashboard] Updated transaction: ${transaction.tikTokUsername} - ${oldStatus} → ${transaction.status}`);
+        console.log(`[Dashboard] Updated transaction: ${tiktokUsername} - ${oldStatus} → ${newStatus}`);
     }
 }
 
@@ -322,10 +383,10 @@ function updateStatistics() {
         return uploadTime && uploadTime >= todayStart;
     });
 
-    const pendingTransactions = transactions.filter(t => t.status === 'pending');
-    const verifiedTransactions = transactions.filter(t => t.status === 'verified');
+    const pendingTransactions = transactions.filter(t => getTransactionStatus(t) === 'pending');
+    const verifiedTransactions = transactions.filter(t => getTransactionStatus(t) === 'verified');
     const totalAmount = todayTransactions
-        .filter(t => t.amount && t.status === 'verified')
+        .filter(t => t.amount && getTransactionStatus(t) === 'verified')
         .reduce((sum, t) => sum + t.amount, 0);
 
     // Update DOM
@@ -353,7 +414,7 @@ function updateTransactionDisplay() {
 
         if (currentFilter !== 'all') {
             filteredTransactions = transactions.filter(transaction => {
-                const status = transaction.verificationStatus || transaction.status || 'pending';
+                const status = getTransactionStatus(transaction);
                 return status === currentFilter;
             });
         }
@@ -447,17 +508,17 @@ function getVerificationBadge(transaction, returnHTML = true) {
  * Create transaction card element
  */
 function createTransactionCard(transaction) {
+    const status = getTransactionStatus(transaction);
     const card = document.createElement('div');
-    card.className = `transaction-card ${transaction.status}`;
+    card.className = `transaction-card ${status}`;
     card.dataset.transactionId = transaction.id;
 
     // Format timestamps and amounts
-    const uploadTime = transaction.uploadedAt?.toDate();
-    const timeAgo = uploadTime ? getTimeAgo(uploadTime) : 'Unknown';
+    const timeAgo = formatTransactionDate(transaction.uploadedAt, true);
     const amount = transaction.amount ? `฿${transaction.amount.toLocaleString()}` : 'N/A';
 
-    // Get TikTok username - check multiple possible field names
-    const tiktokUsername = transaction.tikTokUsername || transaction.tiktok_username || transaction.TikTokUsername || '';
+    // Get TikTok username using helper function
+    const tiktokUsername = getTikTokUsername(transaction);
 
     // Get user initials for avatar
     const initials = getUserInitials(transaction.lineDisplayName || tiktokUsername);
@@ -465,8 +526,9 @@ function createTransactionCard(transaction) {
     // Get verification badge
     const verificationBadge = getVerificationBadge(transaction);
 
-    // Debug: Log username fields for this transaction
+    // Debug: Log ALL available fields to find the correct TikTok username field
     if (transaction.id) {
+        console.log(`[Dashboard] Transaction ${transaction.id} ALL FIELDS:`, transaction);
         console.log(`[Dashboard] Transaction ${transaction.id} username fields:`, {
             tikTokUsername: transaction.tikTokUsername,
             'tiktok_username': transaction.tiktok_username,
@@ -482,52 +544,57 @@ function createTransactionCard(transaction) {
 
     card.innerHTML = `
         <div class="transaction-header">
-            <div class="transaction-user">
+            <div class="customer-section">
                 <div class="user-avatar compact">${initials}</div>
                 <div class="user-info compact">
-                    <h3>${combinedUsername}</h3>
+                    <h3 title="${combinedUsername}">${combinedUsername}</h3>
+                    <div class="transaction-meta">
+                        <span class="transaction-id">#${transaction.id.slice(-6)}</span>
+                        <span class="upload-type">${transaction.uploadType || 'payment'}</span>
+                    </div>
                 </div>
             </div>
-            <div class="transaction-amount compact">
-                <span class="amount-text">${amount}</span>
+            <div class="amount-section">
+                <div class="amount-display">${amount}</div>
                 ${verificationBadge}
             </div>
         </div>
 
-        <div class="transaction-details compact">
-            <div class="detail-item">
-                <span class="detail-value">${timeAgo}</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-value">
-                    <span class="status-badge ${transaction.status}">${transaction.status}</span>
-                </span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-value">${transaction.uploadType || 'payment'}</span>
+        <div class="transaction-body">
+            <div class="transaction-details">
+                <div class="detail-item">
+                    <span class="detail-label">Time</span>
+                    <span class="detail-value">${timeAgo}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Status</span>
+                    <span class="status-badge ${status}">${status}</span>
+                </div>
             </div>
         </div>
 
-        <div class="transaction-actions compact">
-            ${transaction.status === 'pending' ? `
-                <button class="action-button compact approve" onclick="updateTransactionStatus('${transaction.id}', 'verified')" title="Approve">
-                    ✓
+        <div class="transaction-footer">
+            <div class="transaction-actions compact">
+                ${status === 'pending' ? `
+                    <button class="action-button compact approve" onclick="updateTransactionStatus('${transaction.id}', 'verified')" title="Approve">
+                        ✓
+                    </button>
+                    <button class="action-button compact reject" onclick="updateTransactionStatus('${transaction.id}', 'failed')" title="Reject">
+                        ✕
+                    </button>
+                ` : ''}
+                ${transaction.downloadURL ? `
+                    <button class="action-button compact view" onclick="showImageGalleryModal('${transaction.downloadURL}', '${tiktokUsername}', '${transaction.lineDisplayName}')" title="View Images">
+                        🖼
+                    </button>
+                ` : ''}
+                <button class="action-button compact view" onclick="viewTransactionDetails('${transaction.id}')" title="View Details">
+                    👁
                 </button>
-                <button class="action-button compact reject" onclick="updateTransactionStatus('${transaction.id}', 'failed')" title="Reject">
-                    ✕
+                <button class="action-button compact edit" onclick="openEditModal('${transaction.id}')" title="Edit">
+                    ✏
                 </button>
-            ` : ''}
-            ${transaction.downloadURL ? `
-                <button class="action-button compact view" onclick="showImageGalleryModal('${transaction.downloadURL}', '${tiktokUsername}', '${transaction.lineDisplayName}')" title="View Images">
-                    🖼
-                </button>
-            ` : ''}
-            <button class="action-button compact view" onclick="viewTransactionDetails('${transaction.id}')" title="View Details">
-                👁
-            </button>
-            <button class="action-button compact edit" onclick="openEditModal('${transaction.id}')" title="Edit">
-                ✏
-            </button>
+            </div>
         </div>
     `;
 
@@ -686,7 +753,7 @@ function openEditModal(transactionId) {
     if (!transaction) return;
 
     // Populate modal fields with current data
-    const tiktokUsername = transaction.tikTokUsername || transaction.tiktok_username || transaction.TikTokUsername || '';
+    const tiktokUsername = getTikTokUsername(transaction);
     document.getElementById('editTiktokUsername').value = tiktokUsername;
     document.getElementById('editLineDisplayName').value = transaction.lineDisplayName || '';
     document.getElementById('editAmount').value = transaction.amount || '';
@@ -774,14 +841,14 @@ function showTransactionDetailsModal(transactionId) {
         'TikTokUsername': transaction.TikTokUsername
     });
 
-    // Populate transaction details - check multiple possible field names
-    const tiktokUsername = transaction.tikTokUsername || transaction.tiktok_username || transaction.TikTokUsername || 'N/A';
-    document.getElementById('detailTiktokUsername').textContent = tiktokUsername;
+    // Populate transaction details using helper functions
+    const tiktokUsername = getTikTokUsername(transaction);
+    document.getElementById('detailTiktokUsername').textContent = tiktokUsername || 'N/A';
     document.getElementById('detailLineDisplayName').textContent = transaction.lineDisplayName || 'N/A';
     document.getElementById('detailAmount').textContent = transaction.amount ? `฿${transaction.amount}` : 'N/A';
     document.getElementById('detailUploadType').textContent = transaction.uploadType || 'N/A';
-    document.getElementById('detailStatus').textContent = transaction.status || 'N/A';
-    document.getElementById('detailUploadedAt').textContent = transaction.uploadedAt?.toDate().toLocaleString('th-TH') || 'N/A';
+    document.getElementById('detailStatus').textContent = getTransactionStatus(transaction) || 'N/A';
+    document.getElementById('detailUploadedAt').textContent = formatTransactionDate(transaction.uploadedAt) || 'N/A';
     document.getElementById('detailFileName').textContent = transaction.fileName || 'N/A';
     document.getElementById('detailFileSize').textContent = formatFileSize(transaction.fileSize || 0);
 
@@ -1029,18 +1096,19 @@ function collectUserReceiptImages(tiktokUsername, lineDisplayName) {
     const userImages = [];
 
     transactions.forEach(transaction => {
-        // Match by TikTok username or LINE display name
-        const isTikTokMatch = tiktokUsername && transaction.tikTokUsername === tiktokUsername;
+        // Match by TikTok username or LINE display name using helper function
+        const transactionTikTokUsername = getTikTokUsername(transaction);
+        const isTikTokMatch = tiktokUsername && transactionTikTokUsername === tiktokUsername;
         const isLineMatch = lineDisplayName && transaction.lineDisplayName === lineDisplayName;
 
         if ((isTikTokMatch || isLineMatch) && transaction.downloadURL) {
             userImages.push({
                 url: transaction.downloadURL,
-                username: transaction.lineDisplayName || transaction.tikTokUsername || 'Unknown',
+                username: transaction.lineDisplayName || transactionTikTokUsername || 'Unknown',
                 transactionId: transaction.id,
                 uploadedAt: transaction.uploadedAt?.toDate() || new Date(),
                 amount: transaction.amount,
-                status: transaction.status
+                status: getTransactionStatus(transaction)
             });
         }
     });
@@ -1636,17 +1704,11 @@ function generateTransactionTable() {
  */
 function createTransactionTableRow(transaction) {
     const verification = getVerificationBadge(transaction);
-    const formattedDate = new Date(transaction.uploadedAt).toLocaleString('th-TH', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    const formattedDate = formatTransactionDate(transaction.uploadedAt);
 
     const customerInfo = getCustomerInfo(transaction);
     const amount = (transaction.thunderResult?.amount?.amount || transaction.amount || 0).toLocaleString('en-US');
-    const status = transaction.verificationStatus || 'pending';
+    const status = getTransactionStatus(transaction);
 
     return `
         <tr>
@@ -1752,7 +1814,7 @@ function getFilteredTransactions() {
     // Apply status filter
     if (currentFilter !== 'all') {
         filtered = filtered.filter(transaction => {
-            const status = transaction.verificationStatus || 'pending';
+            const status = getTransactionStatus(transaction);
             return status === currentFilter;
         });
     }
@@ -1774,10 +1836,8 @@ function getFilteredTransactions() {
  * @returns {Object} Customer info with lineDisplayName and tiktokUsername
  */
 function getCustomerInfo(transaction) {
-    // Get TikTok username - check multiple possible field names
-    const tiktokUsername = transaction.tikTokUsername ||
-                          transaction.tiktok_username ||
-                          transaction.TikTokUsername || '';
+    // Get TikTok username using helper function
+    const tiktokUsername = getTikTokUsername(transaction);
 
     return {
         lineDisplayName: transaction.lineDisplayName || 'Unknown',
