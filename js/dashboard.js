@@ -1463,7 +1463,12 @@ function viewPaymentMethod(id) {
  * @param {string} mode - View mode ('cards' or 'table')
  */
 function toggleViewMode(mode) {
-    if (viewMode === mode) return; // Already in this mode
+    console.log(`[Dashboard] toggleViewMode called with mode: ${mode}, current mode: ${viewMode}`);
+
+    if (viewMode === mode) {
+        console.log(`[Dashboard] Already in ${mode} mode, returning`);
+        return; // Already in this mode
+    }
 
     viewMode = mode;
 
@@ -1473,16 +1478,20 @@ function toggleViewMode(mode) {
     const cardContainer = document.getElementById('transactionsContainer');
     const tableContainer = document.getElementById('tableViewContainer');
 
+    console.log(`[Dashboard] Elements found - cardBtn: ${!!cardBtn}, tableBtn: ${!!tableBtn}, cardContainer: ${!!cardContainer}, tableContainer: ${!!tableContainer}`);
+
     if (mode === 'cards') {
-        cardBtn.classList.add('active');
-        tableBtn.classList.remove('active');
-        cardContainer.style.display = 'block';
-        tableContainer.style.display = 'none';
+        console.log('[Dashboard] Switching to card view');
+        if (cardBtn) cardBtn.classList.add('active');
+        if (tableBtn) tableBtn.classList.remove('active');
+        if (cardContainer) cardContainer.style.display = 'block';
+        if (tableContainer) tableContainer.style.display = 'none';
     } else {
-        cardBtn.classList.remove('active');
-        tableBtn.classList.add('active');
-        cardContainer.style.display = 'none';
-        tableContainer.style.display = 'block';
+        console.log('[Dashboard] Switching to table view');
+        if (cardBtn) cardBtn.classList.remove('active');
+        if (tableBtn) tableBtn.classList.add('active');
+        if (cardContainer) cardContainer.style.display = 'none';
+        if (tableContainer) tableContainer.style.display = 'block';
 
         // Generate table if needed
         generateTransactionTable();
@@ -1495,11 +1504,17 @@ function toggleViewMode(mode) {
  * Generate transaction table HTML
  */
 function generateTransactionTable() {
+    console.log('[Dashboard] Generating transaction table...');
     const tbody = document.getElementById('transactionsTableBody');
-    if (!tbody) return;
+    if (!tbody) {
+        console.error('[Dashboard] Table tbody not found');
+        return;
+    }
 
     const filteredTransactions = getFilteredTransactions();
     const sortedTransactions = sortTransactions(filteredTransactions);
+
+    console.log(`[Dashboard] Found ${filteredTransactions.length} filtered transactions, ${sortedTransactions.length} sorted transactions`);
 
     if (sortedTransactions.length === 0) {
         tbody.innerHTML = `
@@ -1529,6 +1544,8 @@ function generateTransactionTable() {
             generateTransactionTable();
         });
     });
+
+    console.log('[Dashboard] Table generated successfully');
 }
 
 /**
@@ -1577,7 +1594,7 @@ function createTransactionTableRow(transaction) {
                     <button class="btn-primary" onclick="showTransactionDetailsModal('${transaction.id}')" title="View Details">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn-info" onclick="showImageGalleryModal('${transaction.id}')" title="View Receipts">
+                    <button class="btn-info" onclick="viewTransactionDetails('${transaction.id}')" title="View Receipts">
                         <i class="fas fa-image"></i>
                     </button>
                     <button class="btn-warning" onclick="openEditModal('${transaction.id}')" title="Edit">
@@ -1647,6 +1664,8 @@ function updateSortIndicators() {
  * @returns {Array} Filtered transactions
  */
 function getFilteredTransactions() {
+    console.log(`[Dashboard] getFilteredTransactions called - total transactions: ${transactions.length}, currentFilter: ${currentFilter}, searchQuery: "${searchQuery}"`);
+
     let filtered = transactions;
 
     // Apply status filter
@@ -1664,7 +1683,25 @@ function getFilteredTransactions() {
         });
     }
 
+    console.log(`[Dashboard] Filtered to ${filtered.length} transactions`);
     return filtered;
+}
+
+/**
+ * Get customer info from transaction (handles multiple field name formats)
+ * @param {Object} transaction - Transaction data
+ * @returns {Object} Customer info with lineDisplayName and tiktokUsername
+ */
+function getCustomerInfo(transaction) {
+    // Get TikTok username - check multiple possible field names
+    const tiktokUsername = transaction.tikTokUsername ||
+                          transaction.tiktok_username ||
+                          transaction.TikTokUsername || '';
+
+    return {
+        lineDisplayName: transaction.lineDisplayName || 'Unknown',
+        tiktokUsername: tiktokUsername
+    };
 }
 
 /**
