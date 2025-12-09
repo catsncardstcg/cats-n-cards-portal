@@ -1872,5 +1872,17 @@
     <script src="firebase-config.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/payment-methods.js"></script>
+
+    <!-- Debug script to verify files are loading -->
+    <script>
+        console.log('✅ Firebase config loaded');
+        console.log('✅ Dashboard script loaded');
+        console.log('✅ Payment methods script loaded');
+        console.log('🔍 Available functions:', {
+            initializeFirebase: typeof initializeFirebase,
+            isFirestoreReady: typeof isFirestoreReady,
+            getFirebaseFirestore: typeof getFirebaseFirestore
+        });
+    </script>
 </body>
 </html>

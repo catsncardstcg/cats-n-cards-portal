@@ -3,6 +3,8 @@
  * Firebase Firestore integration for live receipt verification tracking
  */
 
+console.log('🚀 Dashboard.js file is loading...');
+
 // Global variables
 let db;
 let transactions = [];
