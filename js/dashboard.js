@@ -11,7 +11,13 @@ let transactions = [];
 let currentFilter = 'all';
 let searchQuery = '';
 let unsubscribe;
-let paymentMethods = []; // Store payment methods for streamer name verification
+
+// Make paymentMethods globally accessible to avoid conflicts with payment-methods.js
+if (typeof window.paymentMethods === 'undefined') {
+    window.paymentMethods = []; // Store payment methods for streamer name verification
+}
+const paymentMethods = window.paymentMethods;
+
 let viewMode = 'cards'; // 'cards' | 'table'
 let sortConfig = { field: 'uploadedAt', direction: 'desc' };
 
@@ -133,8 +139,10 @@ function initializeDashboard() {
         cardContainer.innerHTML = '<div class="loading-spinner"><div class="spinner"></div><p>Loading transactions...</p></div>';
     }
 
-    // Temporarily skip payment methods loading to debug transaction issues
-    console.log('[Dashboard] Skipping payment methods loading temporarily');
+    // Load payment methods for streamer name verification (but don't block if it fails)
+    loadPaymentMethodsForVerification().catch(error => {
+        console.warn('[Dashboard] Payment methods failed to load, continuing anyway:', error);
+    });
 
     // Start real-time transaction monitoring
     startRealtimeMonitoring();
@@ -1148,7 +1156,6 @@ function handleGalleryKeyboard(event) {
 // PAYMENT METHODS MANAGEMENT
 // =================================
 
-let paymentMethods = [];
 let editingPaymentMethod = null;
 
 /**
