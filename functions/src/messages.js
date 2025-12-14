@@ -8,9 +8,9 @@ module.exports = {
   tikTokLinking: {
     welcomeFirstTime: 'ยินดีต้อนรับสู่ Cats N Cards!\n\n' +
                      'กรุณาผูกบัญชี TikTok ก่อนเริ่มใช้งาน\n\n' +
-                     'พิมพ์ TikTok username (ไม่ต้องมี @)\n' +
-                     'เช่น: myusername, user_name\n\n' +
-                     'หลังจากผูกบัญชีแล้ว สามารถส่งสลิปได้เลยครับบ',
+                     'พิมพ์ TikTok username พร้อม @ นำหน้า\n' +
+                     'เช่น: @myusername, @user_name\n\n' +
+                     'หลังจากผูกบัญชีแล้ว สามารถส่งสลิปได้เลยครับ',
 
     welcomeReturn: (tiktokUsername) =>
       `ยินดีต้อนรับกลับสู่ Cats N Cards!\n\n` +
@@ -27,9 +27,9 @@ module.exports = {
                   'กรุณาลองใหม่อีกครั้งหรือติดต่อแอดมินค่ะ',
 
     invalidUsername: '⚠️ รูปแบบ TikTok username ไม่ถูกต้อง\n\n' +
-                    'กรุณาพิมพ์เฉพาะตัวอักษร ตัวเลข และ _ ได้เท่านั้น\n' +
-                    'ความยาว 2-20 ตัวอักษร\n\n' +
-                    'เช่น: myusername, user_name123'
+                    'กรุณาพิมพ์ @ นำหน้า username\n' +
+                    'เช่น: @myusername, @user_name123\n\n' +
+                    'ตัวอักษร ตัวเลข และ _ ได้เท่านั้น',
   },
 
   // Payment slip processing messages

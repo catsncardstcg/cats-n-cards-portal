@@ -1,4 +1,5 @@
 // Firebase is now loaded via script tags in index.html
+// Using Firebase compat version - all functions should be called via firebase.*
 
 // Firebase configuration
 const firebaseConfig = {
@@ -10,9 +11,9 @@ const firebaseConfig = {
     appId: "1:62209237814:web:08b5039c6b819781ebc997"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Initialize Firebase (using compat version)
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 // Global variables
 let incomingUnsubscribe = null;
@@ -95,14 +96,12 @@ function showTab(tabName) {
 function listenToIncomingSlips() {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const q = query(
-        collection(db, 'orders'),
-        where('verifiedAt', '>', twentyFourHoursAgo),
-        orderBy('verifiedAt', 'desc'),
-        limit(50)
-    );
+    const q = db.collection('orders')
+        .where('verifiedAt', '>', twentyFourHoursAgo)
+        .orderBy('verifiedAt', 'desc')
+        .limit(50);
 
-    incomingUnsubscribe = onSnapshot(q, (snapshot) => {
+    incomingUnsubscribe = q.onSnapshot((snapshot) => {
         const container = document.getElementById('incoming-list');
         container.innerHTML = '';
 
@@ -131,14 +130,12 @@ function listenToIncomingSlips() {
 function listenToReadyToShip() {
     const nextDelivery = getNextDeliveryDate();
 
-    const q = query(
-        collection(db, 'orders'),
-        where('status', '==', 'ready_to_ship'),
-        where('deliveryRound', '==', nextDelivery.dayEng),
-        orderBy('createdAt', 'asc')
-    );
+    const q = db.collection('orders')
+        .where('status', '==', 'ready_to_ship')
+        .where('deliveryRound', '==', nextDelivery.day)
+        .orderBy('createdAt', 'asc');
 
-    shippingUnsubscribe = onSnapshot(q, (snapshot) => {
+    shippingUnsubscribe = q.onSnapshot((snapshot) => {
         const container = document.getElementById('shipping-list');
         container.innerHTML = '';
 
@@ -551,13 +548,11 @@ async function loadStats() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const q = query(
-            collection(db, 'orders'),
-            where('verifiedAt', '>=', today),
-            orderBy('verifiedAt', 'desc')
-        );
+        const q = db.collection('orders')
+            .where('verifiedAt', '>=', today)
+            .orderBy('verifiedAt', 'desc');
 
-        const snapshot = await getDocs(q);
+        const snapshot = await q.get();
         const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         let totalSales = 0;

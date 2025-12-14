@@ -216,8 +216,28 @@ const lineWebhook = functions
               console.log('Processing image message');
               await handleImageMessage(event);
             } else if (event.message.type === 'text') {
-              console.log('Processing text message (not TikTok linking)');
-              // Handle other text messages if needed
+              console.log('Processing text message');
+
+              // Check if user needs TikTok linking first
+              const userMapping = await getUserMapping(userId);
+              if (!userMapping && event.message.text.trim().startsWith('@')) {
+                // First time user sending @username - set linking state and process
+                console.log('First time user sending TikTok username, setting linking state');
+                await setUserState(userId, STATE_WAITING_TIKTOK);
+                await handleTikTokLinking(userId, event.message.text, event.replyToken);
+              } else if (!userMapping) {
+                // First time user not sending @username - prompt for TikTok linking
+                console.log('First time user needs TikTok linking');
+                await setUserState(userId, STATE_WAITING_TIKTOK);
+                await getLineClient().replyMessage(event.replyToken, {
+                  type: 'text',
+                  text: messages.tikTokLinking.welcomeFirstTime
+                });
+              } else {
+                // Regular text message from existing user
+                console.log('Processing text message (not TikTok linking)');
+                // Handle other text messages if needed
+              }
             }
           } else if (event.type === 'follow') {
             console.log('Processing follow event - welcome message disabled (handled by LIFF)');
@@ -530,6 +550,15 @@ async function sendVerificationResponse(userId, orderData, checks) {
  */
 async function handleTikTokLinking(userId, tiktokText, replyToken) {
   try {
+    // Check if message starts with @ symbol
+    if (!tiktokText.trim().startsWith('@')) {
+      await getLineClient().replyMessage(replyToken, {
+        type: 'text',
+        text: messages.tikTokLinking.invalidUsername
+      });
+      return;
+    }
+
     const cleanedUsername = cleanTikTokUsername(tiktokText);
 
     if (!isValidTikTokUsername(cleanedUsername)) {
