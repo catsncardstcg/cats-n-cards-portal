@@ -1,14 +1,13 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js';
-import { getFirestore, collection, query, where, orderBy, limit, onSnapshot, getDocs, doc, updateDoc, writeBatch, setDoc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js';
+// Firebase is now loaded via script tags in index.html
 
-// Firebase configuration (you'll need to update this with your actual config)
+// Firebase configuration
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyD1LsJ_NlxOFGpeSp6BeeUzFIhEMOsMVsY",
+    authDomain: "cats-n-cards-tcg.firebaseapp.com",
+    projectId: "cats-n-cards-tcg",
+    storageBucket: "cats-n-cards-tcg.firebasestorage.app",
+    messagingSenderId: "62209237814",
+    appId: "1:62209237814:web:08b5039c6b819781ebc997"
 };
 
 // Initialize Firebase
