@@ -149,5 +149,13 @@ function attemptFirebaseInit() {
     }
 }
 
+// Export functions to global scope
+window.initializeFirebase = initializeFirebase;
+window.getFirebaseDatabase = getFirebaseDatabase;
+window.getFirebaseStorage = getFirebaseStorage;
+window.getFirebaseFirestore = getFirebaseFirestore;
+window.isFirebaseReady = isFirebaseReady;
+window.isFirestoreReady = isFirestoreReady;
+
 // Start attempting to initialize
 attemptFirebaseInit();

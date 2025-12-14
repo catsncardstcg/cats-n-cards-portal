@@ -218,3 +218,6 @@ async function uploadReceiptToAppsScript(imageFile, tiktokUsername, uploadType, 
         reader.readAsDataURL(imageFile);
     });
 }
+
+// Export functions to global scope
+window.uploadReceiptToFirebase = uploadReceiptToFirebase;

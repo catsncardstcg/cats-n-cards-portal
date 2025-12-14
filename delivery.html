@@ -672,6 +672,68 @@
                 loadTrackingData();
             } else if (tabName === 'request-delivery') {
                 displayDeliveryRound(); // Refresh delivery round info
+                loadUserDataForDelivery(); // Auto-fill user data
+            }
+        }
+
+        // Load user data and auto-fill delivery form
+        async function loadUserDataForDelivery() {
+            try {
+                const lineId = getLINEUserId();
+                if (!lineId) {
+                    console.log('[Delivery] No LINE user ID available');
+                    return;
+                }
+
+                console.log('[Delivery] Loading user data for delivery form...');
+
+                // Initialize Firebase if not already done
+                if (!window.db) {
+                    await initializeFirebase();
+                    const db = getFirebaseFirestore();
+                    window.db = db;
+                }
+
+                // Get user document from Firestore
+                const userDoc = window.db.collection('users').doc(lineId);
+                const userSnapshot = await userDoc.get();
+
+                if (userSnapshot.exists()) {
+                    const userData = userSnapshot.data();
+                    console.log('[Delivery] User data found:', userData);
+
+                    // Auto-fill delivery form
+                    const fullNameField = document.getElementById('full-name');
+                    const phoneField = document.getElementById('phone');
+                    const addressField = document.getElementById('address');
+
+                    if (userData.fullName && fullNameField) {
+                        fullNameField.value = userData.fullName;
+                    }
+                    if (userData.phone && phoneField) {
+                        phoneField.value = userData.phone;
+                    }
+                    if (userData.address && addressField) {
+                        addressField.value = userData.address;
+                    }
+
+                    // Show success message
+                    showAlert('✅ กรอกข้อมูลอัตโนมัติจากข้อมูลที่ลงทะเบียน', 'success');
+                } else {
+                    console.log('[Delivery] No user data found, user needs to register first');
+                    showAlert('⚠️ ไม่พบข้อมูลการลงทะเบียน กรุณาลงทะเบียนก่อนใช้งาน', 'error');
+
+                    // Auto-switch to register tab after 2 seconds
+                    setTimeout(() => {
+                        const registerBtn = document.querySelector('[onclick*="register"]');
+                        if (registerBtn) {
+                            registerBtn.click();
+                        }
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('[Delivery] Error loading user data:', error);
+                showAlert('❌ ไม่สามารถโหลดข้อมูลผู้ใช้ได้ กรุณาลองใหม่', 'error');
             }
         }
 
@@ -968,8 +1030,23 @@
                         }
 
                         // Compress and upload image
-                        const compressedFile = await compressImage(file);
-                        const imageUrl = await uploadImageToStorage(compressedFile, `slips/${lineId}/${Date.now()}.jpg`);
+                        const compressionOptions = {
+                            maxSizeMB: 0.5,
+                            maxWidthOrHeight: 1920,
+                            useWebWorker: true
+                        };
+                        const compressedFile = await imageCompression(file, compressionOptions);
+                        const uploadResult = await uploadReceiptToFirebase(
+                            compressedFile,
+                            'payment',
+                            'payment',
+                            {
+                                lineUserId: lineId,
+                                amount: parseFloat(document.getElementById('payment-amount').value),
+                                timestamp: new Date().toISOString()
+                            }
+                        );
+                        const imageUrl = uploadResult.url;
 
                         // Send payment data
                         const data = {
