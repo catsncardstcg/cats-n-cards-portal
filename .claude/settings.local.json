@@ -5,7 +5,13 @@
       "Bash(git commit:*)",
       "Bash(npm install:*)",
       "Bash(firebase functions:list:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(firebase functions:log:*)",
+      "Bash(curl:*)",
+      "Bash(gcloud functions logs read:*)",
+      "Bash(firebase functions:config:get:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

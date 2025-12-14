@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Cats N Cards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tab-active { border-bottom: 2px solid #3B82F6; color: #3B82F6; }
+        .status-green { background: #D1FAE5; color: #065F46; }
+        .status-yellow { background: #FEF3C7; color: #92400E; }
+        .status-red { background: #FEE2E2; color: #991B1B; }
+        .status-gray { background: #F3F4F6; color: #4B5563; }
+
+        /* Custom scrollbar for tables */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Order card hover effect */
+        .order-card {
+            transition: all 0.3s ease;
+        }
+        .order-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        /* Loading animation */
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3B82F6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Checkbox for order selection */
+        .order-checkbox {
+            transition: all 0.2s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center">
+        <div class="bg-white p-8 rounded-lg shadow-lg w-96">
+            <h2 class="text-2xl font-bold mb-6 text-center">🔒 Admin Login</h2>
+            <input type="password" id="password"
+                   class="w-full border rounded p-3 mb-4"
+                   placeholder="รหัสผ่าน"
+                   autocomplete="current-password"
+                   onkeypress="if(event.key === 'Enter') login()">
+            <button onclick="login()"
+                    class="w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600 transition-colors">
+                เข้าสู่ระบบ
+            </button>
+            <p id="error-msg" class="text-red-500 text-sm mt-2 hidden">รหัสผ่านไม่ถูกต้อง</p>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="hidden">
+
+        <!-- Header -->
+        <div class="bg-white shadow-md p-4 sticky top-0 z-10">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-xl font-bold">🎴 Cats N Cards Admin</h1>
+                <div class="flex gap-4 items-center text-sm">
+                    <span>👤 Admin</span>
+                    <span id="live-indicator" class="flex items-center">
+                        <span class="w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></span>
+                        LIVE
+                    </span>
+                    <span id="today-count" class="font-semibold">Today: 0</span>
+                    <button onclick="logout()" class="text-gray-600 hover:text-gray-800">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="bg-white border-b sticky top-16 z-10">
+            <div class="container mx-auto flex">
+                <button onclick="showTab('incoming')"
+                        id="tab-btn-incoming"
+                        class="px-6 py-3 font-medium tab-active">
+                    📥 Incoming Slips
+                </button>
+                <button onclick="showTab('shipping')"
+                        id="tab-btn-shipping"
+                        class="px-6 py-3 font-medium text-gray-600 hover:text-gray-800">
+                    📦 Ready to Ship
+                </button>
+                <button onclick="showTab('stats')"
+                        id="tab-btn-stats"
+                        class="px-6 py-3 font-medium text-gray-600 hover:text-gray-800">
+                    📊 Stats
+                </button>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="container mx-auto p-4">
+
+            <!-- Tab 1: Incoming Slips -->
+            <div id="tab-incoming" class="tab-content">
+                <div class="mb-4 flex justify-between items-center">
+                    <h2 class="text-lg font-semibold">รอตรวจสอบ</h2>
+                    <div class="text-sm text-gray-600">
+                        Auto-refresh: <span id="refresh-countdown">2</span>s
+                    </div>
+                </div>
+                <div id="incoming-list" class="space-y-4">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+
+            <!-- Tab 2: Ready to Ship -->
+            <div id="tab-shipping" class="tab-content hidden">
+                <div class="mb-4 flex justify-between items-center">
+                    <h2 class="text-lg font-semibold">
+                        จัดส่งรอบ: <span id="next-delivery-date"></span>
+                    </h2>
+                    <div class="flex gap-2">
+                        <button onclick="selectAll()"
+                                class="px-4 py-2 bg-gray-200 rounded text-sm hover:bg-gray-300 transition-colors">
+                            ☑️ Select All
+                        </button>
+                        <button onclick="clearSelection()"
+                                class="px-4 py-2 bg-gray-200 rounded text-sm hover:bg-gray-300 transition-colors">
+                            ❌ Clear Selection
+                        </button>
+                        <button onclick="exportToSheets()"
+                                class="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors">
+                            📤 Export to Sheets
+                        </button>
+                    </div>
+                </div>
+                <div id="shipping-count" class="text-sm text-gray-600 mb-4">
+                    0 orders selected
+                </div>
+                <div id="shipping-list" class="space-y-4">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+
+            <!-- Tab 3: Stats -->
+            <div id="tab-stats" class="tab-content hidden">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-gray-600 text-sm mb-2">💰 Total Sales Today</h3>
+                        <p id="stats-sales" class="text-3xl font-bold">฿0</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-gray-600 text-sm mb-2">📦 Total Orders</h3>
+                        <p id="stats-orders" class="text-3xl font-bold">0</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-gray-600 text-sm mb-2">✅ Verified</h3>
+                        <p id="stats-verified" class="text-3xl font-bold">0</p>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-white p-6 rounded-lg shadow">
+                    <h3 class="font-semibold mb-4">Status Breakdown</h3>
+                    <div id="stats-breakdown"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Slip Modal -->
+    <div id="slip-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg max-w-4xl max-h-screen overflow-auto w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">Slip Image</h3>
+                <button onclick="closeSlipModal()" class="text-gray-600 hover:text-gray-800 text-2xl">
+                    ×
+                </button>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                    <img id="slip-image" src="" alt="Slip" class="w-full rounded-lg shadow">
+                </div>
+                <div id="slip-details" class="text-sm">
+                    <!-- Order details -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module" src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script type="module" src="./script.js"></script>
+</body>
+</html>

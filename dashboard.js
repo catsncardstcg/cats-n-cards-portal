@@ -18,7 +18,7 @@ if (typeof window.paymentMethods === 'undefined') {
 }
 const paymentMethods = window.paymentMethods;
 
-let viewMode = 'cards'; // 'cards' | 'table'
+let viewMode = 'table'; // 'cards' | 'table'
 let sortConfig = { field: 'uploadedAt', direction: 'desc' };
 
 // =================================
@@ -75,7 +75,10 @@ function getTransactionStatus(transaction) {
  * @returns {string} TikTok username
  */
 function getTikTokUsername(transaction) {
-    return transaction.tiktokUsername || '';
+    return transaction.tiktokUsername ||
+           transaction.tiktok_username ||
+           transaction.TikTokUsername ||
+           '';
 }
 
 // Initialize dashboard when DOM is ready
@@ -93,7 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const initCheck = setInterval(() => {
         if (typeof isFirestoreReady === 'function' && isFirestoreReady()) {
-            console.log('[Dashboard] Firebase is ready!');
             clearInterval(initCheck);
             initializeDashboard();
         } else {
@@ -403,10 +405,11 @@ function updateStatistics() {
  */
 function updateTransactionDisplay() {
     try {
-        console.log('[Dashboard] updateTransactionDisplay called');
-
-        // Use the original simple filtering to avoid breaking existing functionality
+  
+        // Get both containers
         const cardContainer = document.getElementById('transactionsContainer');
+        const tableContainer = document.getElementById('tableViewContainer');
+
         if (!cardContainer) return;
 
         // Simple filter based on current filter only (ignore search for now to debug)
@@ -425,18 +428,47 @@ function updateTransactionDisplay() {
         cardContainer.innerHTML = '';
 
         if (filteredTransactions.length === 0) {
-            showEmptyState(cardContainer);
+            if (viewMode === 'table') {
+                if (tableContainer) {
+                    const emptyTableHTML = `
+                        <div class="empty-state" style="text-align: center; padding: 40px; color: #666;">
+                            <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                            <p>No transactions found for the current filter.</p>
+                        </div>
+                    `;
+                    tableContainer.innerHTML = emptyTableHTML;
+                }
+            } else {
+                showEmptyState(cardContainer);
+            }
         } else {
-            // Render transactions as cards
-            filteredTransactions.forEach(transaction => {
-                const transactionCard = createTransactionCard(transaction);
-                cardContainer.appendChild(transactionCard);
-            });
+            if (viewMode === 'table') {
+                // Generate table data
+                generateTransactionTable();
+            } else {
+                // Render transactions as cards
+                filteredTransactions.forEach(transaction => {
+                    const transactionCard = createTransactionCard(transaction);
+                    cardContainer.appendChild(transactionCard);
+                });
+            }
         }
 
-        // Update table view if active
-        if (viewMode === 'table') {
-            generateTransactionTable();
+        // Setup initial view mode containers
+        if (cardContainer && tableContainer) {
+            if (viewMode === 'table') {
+                cardContainer.style.display = 'none';
+                tableContainer.style.display = 'block';
+
+                // Update button states
+                const cardBtn = document.getElementById('cardViewBtn');
+                const tableBtn = document.getElementById('tableViewBtn');
+                if (cardBtn) cardBtn.classList.remove('active');
+                if (tableBtn) tableBtn.classList.add('active');
+            } else {
+                cardContainer.style.display = 'block';
+                tableContainer.style.display = 'none';
+            }
         }
 
         console.log(`[Dashboard] Displayed ${filteredTransactions.length} transactions in ${viewMode} view`);
@@ -1612,8 +1644,7 @@ function viewPaymentMethod(id) {
  */
 // Make toggleViewMode globally accessible
 window.toggleViewMode = function(mode) {
-    console.log(`[Dashboard] toggleViewMode called with mode: ${mode}, current mode: ${viewMode}`);
-
+  
     if (viewMode === mode) {
         console.log(`[Dashboard] Already in ${mode} mode, returning`);
         return; // Already in this mode
@@ -1694,8 +1725,7 @@ function generateTransactionTable() {
         });
     });
 
-    console.log('[Dashboard] Table generated successfully');
-}
+    }
 
 /**
  * Create a table row for a transaction
@@ -1728,8 +1758,8 @@ function createTransactionTableRow(transaction) {
                 <span class="table-status ${status}">${status}</span>
             </td>
             <td>
-                <div class="table-verification ${verification.class}">
-                    ${verification.icon} ${verification.text}
+                <div class="table-verification ${verification.class || 'no-data'}">
+                    ${verification.icon || '⚠️'} ${verification.text || 'No Data'}
                 </div>
             </td>
             <td>

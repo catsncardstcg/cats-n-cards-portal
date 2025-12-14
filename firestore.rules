@@ -15,5 +15,51 @@ service cloud.firestore {
       // Allow write access for authenticated users only (admin access)
       allow write, create, update, delete: if request.auth != null;
     }
+
+    // Orders collection (for LINE OA slip verification)
+    match /orders/{orderId} {
+      // Cloud Functions can create and update orders
+      allow create, update: if request.auth != null;
+
+      // Admin dashboard can read all orders (protected by password in app)
+      allow read: if true;
+
+      // LIFF apps can read their own orders
+      allow read: if request.auth != null
+                  && request.auth.uid == resource.data.lineUserId;
+
+      // LIFF apps can update delivery address only
+      allow update: if request.auth != null
+                    && request.auth.uid == resource.data.lineUserId
+                    && request.resource.data.diff(resource.data)
+                       .affectedKeys()
+                       .hasOnly(['deliveryAddress', 'status', 'updatedAt', 'tiktokUsername', 'products']);
+    }
+
+    // Duplicates collection (for internal duplicate checking)
+    match /duplicates/{transactionId} {
+      // Only Cloud Functions can access duplicates collection
+      allow read, write: if request.auth != null;
+    }
+
+    // User mappings collection (LINE ID ↔ TikTok username linking)
+    match /userMappings/{userId} {
+      // Users can read their own mapping
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Cloud Functions can manage mappings
+      allow read, write: if request.auth != null;
+    }
+
+    // Pending orders collection (temporary storage for first-time users)
+    match /pendingOrders/{userId} {
+      // Only Cloud Functions can access pending orders
+      allow read, write: if request.auth != null;
+    }
+
+    // User states collection (conversation state management)
+    match /userStates/{userId} {
+      // Only Cloud Functions can access user states
+      allow read, write: if request.auth != null;
+    }
   }
 }

@@ -379,76 +379,88 @@
         <div id="line-greeting"></div>
 
         <div class="tabs">
-            <button class="tab-button active" onclick="switchTab('register')">
-                📝 Register<br>ลงทะเบียน
+            <button class="tab-button active" onclick="switchTab('pending-orders')">
+                📋 Pending Orders<br>คำสั่งซื้อที่รอที่อยู่
             </button>
             <button class="tab-button" onclick="switchTab('request-delivery')">
-                🚚 Request Delivery<br>ขอจัดส่ง
+                🚚 Traditional Request<br>ขอจัดส่งแบบเก่า
+            </button>
+            <button class="tab-button" onclick="switchTab('edit-address')" id="edit-address-tab" style="display: none;">
+                ✏️ Edit Address<br>แก้ไขที่อยู่
             </button>
             <button class="tab-button" onclick="switchTab('view-tracking')">
                 🔍 View Tracking<br>ดูเลขพัสดุ
             </button>
         </div>
 
-        <!-- Register Tab -->
-        <div id="register" class="tab-content active">
-            <h2 style="margin-bottom: 20px;">ลงทะเบียนที่อยู่จัดส่ง</h2>
-            <div class="info-box">
-                <p>💡 กรอกข้อมูลและอัปโหลด screenshot โปรไฟล์ TikTok ของคุณเพื่อยืนยันตัวตน (ครั้งแรกเท่านั้น)</p>
+  
+        <!-- Pending Orders Tab -->
+        <div id="pending-orders" class="tab-content active">
+            <h2 style="margin-bottom: 20px;">📋 คำสั่งซื้อที่รอกรอกที่อยู่จัดส่ง</h2>
+
+            <!-- Orders will be populated here -->
+            <div id="pending-orders-list">
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+                    <p>กำลังโหลดรายการคำสั่งซื้อ...</p>
+                </div>
             </div>
-            
-            <div id="register-alert" class="alert"></div>
-            
-            <form id="registerForm" onsubmit="registerAddress(event)">
-                <div class="form-group">
-                    <label for="tiktok-username">TikTok Username *</label>
-                    <input type="text" id="tiktok-username" placeholder="@yourusername" required>
-                </div>
 
-                <div class="form-group">
-                    <label for="full-name">Full Name / ชื่อ-นามสกุล *</label>
-                    <input type="text" id="full-name" placeholder="ชื่อ นามสกุล" required>
-                </div>
+            <!-- Delivery Form (initially hidden) -->
+            <div id="delivery-form-container" style="display: none; margin-top: 30px;">
+                <h3 style="margin-bottom: 20px;">📦 กรอกที่อยู่จัดส่ง</h3>
 
-                <div class="form-group">
-                    <label for="phone">Phone Number / เบอร์โทรศัพท์ *</label>
-                    <input type="tel" id="phone" placeholder="08XXXXXXXX" required>
-                </div>
+                <form id="delivery-address-form">
+                    <input type="hidden" id="selected-order-ids">
 
-                <div class="form-group">
-                    <label for="address">Delivery Address / ที่อยู่จัดส่ง *</label>
-                    <textarea id="address" placeholder="บ้านเลขที่ หมู่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์" required></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="notes">Delivery Notes / หมายเหตุ (Optional)</label>
-                    <textarea id="notes" placeholder="เช่น บ้านติดวัด ตึกสีฟ้า ฯลฯ"></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label>TikTok Profile Screenshot / ภาพ Screenshot โปรไฟล์ TikTok *</label>
-                    <div class="info-box" style="margin-top: 10px;">
-                        <p>📸 กรุณาถ่าย screenshot โปรไฟล์ TikTok ของคุณที่แสดง username ชัดเจน (เพื่อป้องกันคนสวมรอยนะครับบ)</p>
-                    </div>
-                    <div class="file-upload">
-                        <label for="profile-screenshot">
-                            📸 Upload Screenshot
-                        </label>
-                        <input type="file" id="profile-screenshot" accept="image/*" onchange="handleScreenshotSelect(event)" required>
-                        <div class="file-name" id="screenshot-name"></div>
+                    <div class="form-group">
+                        <label for="delivery-full-name">👤 ชื่อ-นามสกุล (Full Name) *</label>
+                        <input type="text" id="delivery-full-name" required>
                     </div>
 
-                    <!-- Upload Progress for Screenshot -->
-                    <div id="register-upload-progress" class="upload-progress" style="display: none;">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="register-progress-fill"></div>
+                    <div class="form-group">
+                        <label for="delivery-phone">📞 เบอร์โทรศัพท์ (Phone) *</label>
+                        <input type="tel" id="delivery-phone" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="delivery-address">🏠 ที่อยู่ (Address) *</label>
+                        <textarea id="delivery-address" rows="3" required placeholder="บ้านเลขที่, หมู่, ตรอก, ถนน, แขวง, เขต"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="delivery-province">🏙️ จังหวัด (Province) *</label>
+                            <select id="delivery-province" required>
+                                <option value="">เลือกจังหวัด</option>
+                                <!-- Thai provinces will be populated by JavaScript -->
+                            </select>
                         </div>
-                        <p class="progress-text" id="register-progress-text">Preparing upload...</p>
+                        <div class="form-group">
+                            <label for="delivery-postal">📮 รหัสไปรษณีย์ (Postal Code) *</label>
+                            <input type="text" id="delivery-postal" pattern="[0-9]{5}" required placeholder="10500">
+                        </div>
                     </div>
-                </div>
 
-                <button type="submit" class="btn" id="register-btn">📝 Register / ลงทะเบียน</button>
-            </form>
+                    <div class="form-group">
+                        <label for="delivery-notes">📝 หมายเหตุ (Notes) - ไม่ระบุก็ได้</label>
+                        <textarea id="delivery-notes" rows="2" placeholder="ข้อมูลเพิ่มเติม เช่น จัดส่งตอนไหนดี หรือ จุดสังเกตุ"></textarea>
+                    </div>
+
+                    <!-- Selected Orders Summary -->
+                    <div id="selected-orders-summary" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none;">
+                        <h4 style="margin-bottom: 10px;">📋 คำสั่งซื้อที่เลือก:</h4>
+                        <div id="selected-orders-list"></div>
+                        <div style="margin-top: 10px; font-weight: bold; color: #4CAF50;">
+                            รวมคะแนนที่ได้: <span id="selected-total-points">0</span> แต้ม
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        ✅ ส่งข้อมูลจัดส่ง / Submit Delivery Info
+                    </button>
+                </form>
+            </div>
         </div>
 
         <!-- Request Delivery Tab -->
@@ -511,6 +523,46 @@
                     ✅ Submit Request / ส่งคำขอจัดส่ง
                 </button>
             </div>
+              </div>
+
+        <!-- Edit Address Tab -->
+        <div id="edit-address" class="tab-content">
+            <h2 style="margin-bottom: 20px;">แก้ไขที่อยู่จัดส่ง</h2>
+            <div class="info-box">
+                <p>💡 อัปเดตข้อมูลที่อยู่จัดส่งของคุณ</p>
+            </div>
+
+            <div id="edit-address-alert" class="alert"></div>
+
+            <form id="editAddressForm" onsubmit="updateAddress(event)">
+                <div class="form-group">
+                    <label for="edit-full-name">Full Name / ชื่อ-นามสกุล *</label>
+                    <input type="text" id="edit-full-name" placeholder="ชื่อ นามสกุล" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-phone">Phone Number / เบอร์โทรศัพท์ *</label>
+                    <input type="tel" id="edit-phone" placeholder="08XXXXXXXX" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-address">Delivery Address / ที่อยู่จัดส่ง *</label>
+                    <textarea id="edit-address" placeholder="บ้านเลขที่ หมู่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-notes">Delivery Notes / หมายเหตุ (Optional)</label>
+                    <textarea id="edit-notes" placeholder="เช่น บ้านติดวัด ตึกสีฟ้า ฯลฯ"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-tiktok-verify">TikTok Username for Verification</label>
+                    <input type="text" id="edit-tiktok-verify" placeholder="@yourusername" required>
+                    <small style="color: #666; display: block; margin-top: 5px;">กรอก username เพื่อยืนยันว่าเป็นเจ้าของบัญชี</small>
+                </div>
+
+                <button type="submit" class="btn">✅ Update Address / อัปเดตที่อยู่</button>
+            </form>
         </div>
 
         <!-- View Tracking Tab -->
@@ -1125,21 +1177,78 @@
                 // Store LINE user ID for backend
                 lineUserId = getLINEUserId();
 
-                // Show personalized greeting
+                // Check if user is registered and show appropriate interface
+                await checkUserRegistration();
+
+                // Load pending orders for LINE OA slip verification system
+                await loadPendingOrders();
+
+                // Show personalized greeting with TikTok linking status
                 const displayName = getLINEDisplayName();
+                const tiktokUsername = getTikTokUsername();
+
                 if (displayName) {
+                    let tiktokStatus = '';
+                    if (tiktokUsername) {
+                        tiktokStatus = `
+                            <div style="
+                                background: #e8f5e8;
+                                border: 1px solid #4caf50;
+                                color: #2e7d32;
+                                padding: 8px 12px;
+                                border-radius: 20px;
+                                font-size: 0.9em;
+                                margin-top: 10px;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                            ">
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-.96 1.39-2.39 2.41-3.94 2.94-1.57.54-3.29.71-4.9.41-1.49-.27-2.89-1.04-3.93-2.17-.54-.58-.93-1.27-1.29-1.97-.72.08-1.43.02-2.03-.43-.78-.57-1.23-1.57-1.04-2.53.19-.98.96-1.75 1.94-1.92.75-.13 1.57.07 2.14.6.69.64.94 1.68.65 2.57.83.31 1.71.49 2.61.49.87-.01 1.74-.21 2.51-.6.83-.42 1.54-1.1 1.99-1.93.33-.62.49-1.32.49-2.02-.01-3.44.01-6.88-.02-10.31-.66.38-1.29.8-2 1.09-1.3.52-2.71.73-4.11.66-.02 1.46-.04 2.92-.02 4.38-.01.69-.14 1.38-.42 2.01-.46 1.08-1.39 1.92-2.52 2.25-1.13.32-2.4.15-3.38-.49-.89-.59-1.48-1.58-1.55-2.64-.07-1.03.38-2.08 1.18-2.73.74-.6 1.71-.84 2.62-.67.07.02.14.03.2.04-.01-1.86-.02-3.72-.01-5.58 1.31-.02 2.61-.01 3.91-.02z"/>
+                                </svg>
+                                <strong>@${tiktokUsername}</strong> (เชื่อมโยงแล้ว)
+                            </div>
+                        `;
+                    } else {
+                        tiktokStatus = `
+                            <div style="
+                                background: #fff3cd;
+                                border: 1px solid #ffc107;
+                                color: #856404;
+                                padding: 8px 12px;
+                                border-radius: 20px;
+                                font-size: 0.9em;
+                                margin-top: 10px;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 6px;
+                            ">
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                                </svg>
+                                <span>ยังไม่ได้เชื่อมโยง TikTok</span>
+                            </div>
+                        `;
+                    }
+
                     const greetingHTML = `
                         <div style="
                             background: white;
-                            padding: 15px 20px;
+                            padding: 20px;
                             border-radius: 12px;
                             margin-bottom: 20px;
                             text-align: center;
                             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
                         ">
-                            <p style="margin: 0; font-size: 1.1em; color: #333;">
-                                สวัสดี <strong>${displayName}</strong>! 👋
-                            </p>
+                            <div style="margin-bottom: 10px; font-size: 1.2em; color: #333;">
+                                🎴 สวัสดี <strong>${displayName}</strong>! 👋
+                            </div>
+                            ${tiktokStatus}
+                            ${!tiktokUsername ? `
+                                <div style="margin-top: 15px; font-size: 0.9em; color: #666;">
+                                    ส่งสลิปการโอนเงินมาที่ LINE Chat เพื่อเริ่มใช้งาน
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                     document.getElementById('line-greeting').innerHTML = greetingHTML;
@@ -1150,6 +1259,505 @@
                 console.log('[Delivery] LIFF not available (not in LINE browser)');
             }
         });
+
+        // Check if user is already registered
+        async function checkUserRegistration() {
+            try {
+                const lineId = getLINEUserId();
+                if (!lineId) return;
+
+                // Check if user exists in the system
+                const response = await fetch(`${SCRIPT_URL}?action=checkRegistration&lineUserId=${encodeURIComponent(lineId)}`);
+                const result = await response.json();
+
+                if (result.exists && result.userData) {
+                    console.log('[Delivery] User is registered, showing edit address option');
+
+                    // Show edit address tab
+                    const editAddressTab = document.getElementById('edit-address-tab');
+                    if (editAddressTab) {
+                        editAddressTab.style.display = 'block';
+                    }
+
+                    // Auto-fill edit form with existing data
+                    if (document.getElementById('edit-full-name')) {
+                        document.getElementById('edit-full-name').value = result.userData.fullName || '';
+                    }
+                    if (document.getElementById('edit-phone')) {
+                        document.getElementById('edit-phone').value = result.userData.phone || '';
+                    }
+                    if (document.getElementById('edit-address')) {
+                        document.getElementById('edit-address').value = result.userData.address || '';
+                    }
+                    if (document.getElementById('edit-notes')) {
+                        document.getElementById('edit-notes').value = result.userData.notes || '';
+                    }
+                } else {
+                    console.log('[Delivery] User not registered, hide edit address tab');
+                }
+            } catch (error) {
+                console.error('[Delivery] Error checking user registration:', error);
+            }
+        }
+
+        // Update address function
+        async function updateAddress(event) {
+            event.preventDefault();
+
+            try {
+                const lineId = getLINEUserId();
+                const tiktokUsername = getTikTokUsername();
+
+                // Show loading
+                showAlert('edit-address-alert', '⏳ Updating address...', 'info');
+
+                const data = {
+                    action: 'updateAddress',
+                    lineUserId: lineId || null,
+                    tiktokUsername: tiktokUsername || null,
+                    fullName: document.getElementById('edit-full-name').value,
+                    phone: document.getElementById('edit-phone').value,
+                    address: document.getElementById('edit-address').value,
+                    notes: document.getElementById('edit-notes').value,
+                    verificationUsername: document.getElementById('edit-tiktok-verify').value
+                };
+
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('edit-address-alert', '✅ Address updated successfully!', 'success');
+                    event.target.reset();
+
+                    // Switch back to delivery request tab
+                    setTimeout(() => {
+                        switchTab('request-delivery');
+                    }, 2000);
+                } else {
+                    showAlert('edit-address-alert', '❌ ' + (result.error || 'Failed to update address'), 'error');
+                }
+            } catch (error) {
+                console.error('[Delivery] Error updating address:', error);
+                showAlert('edit-address-alert', '❌ Error updating address. Please try again.', 'error');
+            }
+        }
+
+        // Simplified request delivery function (no registration requirement)
+        async function submitDeliveryRequest() {
+            try {
+                if (!selectedReceipt) {
+                    showAlert('delivery-alert', '❌ Please upload a payment receipt first', 'error');
+                    return;
+                }
+
+                const lineId = getLINEUserId();
+                const displayName = getLINEDisplayName();
+                const tiktokUsername = getTikTokUsername();
+
+                // Show loading
+                document.getElementById('submit-delivery-btn').disabled = true;
+                document.getElementById('submit-delivery-btn').textContent = '⏳ Processing...';
+                showAlert('delivery-alert', '⏳ Submitting delivery request...', 'info');
+
+                // Compress receipt image
+                const { base64Data: receiptBase64, mimeType: receiptMimeType } = await compressImage(selectedReceipt, 800, 0.8);
+
+                const deliveryRound = getNextDeliveryRound();
+
+                const data = {
+                    action: 'submitDeliveryRequest',
+                    tiktokUsername: tiktokUsername || document.getElementById('delivery-tiktok').value,
+                    lineUserId: lineId || null,
+                    lineDisplayName: displayName || null,
+                    linePictureUrl: getLINEPictureUrl() || null,
+                    receiptFileName: selectedReceipt.name,
+                    receiptData: receiptBase64,
+                    receiptMimeType: receiptMimeType,
+                    deliveryRound: deliveryRound.dayEng,
+                    submittedAt: new Date().toISOString()
+                };
+
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert('delivery-alert', `✅ Delivery request submitted! ${deliveryRound.urgent ? ' (Urgent delivery)' : ''}`, 'success');
+
+                    // Reset form
+                    document.getElementById('deliveryForm').reset();
+                    selectedReceipt = null;
+                    document.getElementById('receipt-name').textContent = '';
+                    document.getElementById('qr-section').style.display = 'none';
+                    document.getElementById('deliveryForm').style.display = 'block';
+
+                    // Load tracking data
+                    loadTrackingData();
+                } else {
+                    showAlert('delivery-alert', '❌ ' + (result.error || 'Failed to submit delivery request'), 'error');
+                }
+            } catch (error) {
+                console.error('[Delivery] Error submitting delivery request:', error);
+                showAlert('delivery-alert', '❌ Error submitting request. Please try again.', 'error');
+            } finally {
+                document.getElementById('submit-delivery-btn').disabled = false;
+                document.getElementById('submit-delivery-btn').textContent = '✅ Submit Request / ส่งคำขอจัดส่ง';
+            }
+        }
+
+        // Switch tab function updated to handle edit-address
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            const selectedTab = document.getElementById(tabName);
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+
+            // Activate button
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(btn => {
+                if (btn.getAttribute('onclick').includes(tabName)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Special handling for edit-address tab
+            if (tabName === 'edit-address') {
+                // Pre-fill form if user data exists
+                checkUserRegistration();
+            }
+        }
+
+        // ============ NEW FUNCTIONS FOR PENDING ORDERS ============
+
+        // Load pending orders from Firestore
+        async function loadPendingOrders() {
+            try {
+                const lineId = getLINEUserId();
+                if (!lineId) {
+                    console.log('[Delivery] No LINE user ID, cannot load orders');
+                    return;
+                }
+
+                console.log('[Delivery] Loading pending orders for user:', lineId);
+
+                // Initialize Firebase if not already done
+                if (!window.db) {
+                    await initializeFirebase();
+                    const db = getFirebaseFirestore();
+                    window.db = db;
+                }
+
+                const db = window.db;
+
+                // Query pending orders for this user
+                const q = query(
+                    collection(db, 'orders'),
+                    where('lineUserId', '==', lineId),
+                    where('status', '==', 'pending_address'),
+                    orderBy('verifiedAt', 'desc')
+                );
+
+                const querySnapshot = await getDocs(q);
+                const pendingOrders = [];
+
+                querySnapshot.forEach((doc) => {
+                    pendingOrders.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+
+                console.log('[Delivery] Found pending orders:', pendingOrders.length);
+                displayPendingOrders(pendingOrders);
+
+            } catch (error) {
+                console.error('[Delivery] Error loading pending orders:', error);
+                const container = document.getElementById('pending-orders-list');
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
+                        <p>เกิดข้อผิดพลาดในการโหลดคำสั่งซื้อ</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Display pending orders
+        function displayPendingOrders(orders) {
+            const container = document.getElementById('pending-orders-list');
+
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
+                        <p>ไม่มีคำสั่งซื้อที่รอกรอกที่อยู่</p>
+                        <p style="font-size: 0.9em; margin-top: 10px;">
+                            ส่งสลิปการโอนเงินมาที่ LINE Chat หลังจากนั้นคำสั่งซื้อจะปรากฏที่นี่
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Build HTML for orders
+            let html = '<div style="margin-bottom: 20px;"><p>เลือกคำสั่งซื้อที่ต้องการจัดส่ง:</p></div>';
+            html += '<div style="max-height: 400px; overflow-y: auto;">';
+
+            orders.forEach((order, index) => {
+                const date = new Date(order.verifiedAt?.toDate?.() || order.verifiedAt).toLocaleDateString('th-TH');
+                const time = new Date(order.verifiedAt?.toDate?.() || order.verifiedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+                html += `
+                    <div class="order-card" style="
+                        border: 2px solid #e0e0e0;
+                        border-radius: 12px;
+                        padding: 15px;
+                        margin-bottom: 15px;
+                        background: white;
+                        cursor: pointer;
+                        transition: all 0.3s;
+                    " onclick="toggleOrderSelection('${order.id}', ${order.pointsEarned || 0})">
+                        <div class="order-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div>
+                                <strong>คำสั่งซื้อ #${order.id.slice(-6)}</strong>
+                                <div style="font-size: 0.9em; color: #666; margin-top: 2px;">
+                                    ${date} ${time}
+                                </div>
+                            </div>
+                            <div class="order-checkbox" id="checkbox-${order.id}" style="
+                                width: 24px;
+                                height: 24px;
+                                border: 2px solid #4CAF50;
+                                border-radius: 50%;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                background: white;
+                            ">
+                                <span id="checkmark-${order.id}" style="display: none; color: #4CAF50; font-weight: bold;">✓</span>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em;">
+                            <div><strong>ยอดเงิน:</strong> ฿${(order.amount || 0).toLocaleString()}</div>
+                            <div><strong>คะแนน:</strong> +${order.pointsEarned || 0} แต้ม</div>
+                            <div><strong>ธนาคาร:</strong> ${order.senderBank || 'N/A'}</div>
+                            <div><strong>ผู้รับ:</strong> ${order.receiverBank || 'N/A'}</div>
+                        </div>
+                        ${order.tiktokUsername ? `
+                            <div style="
+                                background: #e8f5e8;
+                                border: 1px solid #4caf50;
+                                color: #2e7d32;
+                                padding: 4px 8px;
+                                border-radius: 12px;
+                                font-size: 0.8em;
+                                margin-top: 8px;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 4px;
+                            ">
+                                <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-.96 1.39-2.39 2.41-3.94 2.94-1.57.54-3.29.71-4.9.41-1.49-.27-2.89-1.04-3.93-2.17-.54-.58-.93-1.27-1.29-1.97-.72.08-1.43.02-2.03-.43-.78-.57-1.23-1.57-1.04-2.53.19-.98.96-1.75 1.94-1.92.75-.13 1.57.07 2.14.6.69.64.94 1.68.65 2.57.83.31 1.71.49 2.61.49.87-.01 1.74-.21 2.51-.6.83-.42 1.54-1.1 1.99-1.93.33-.62.49-1.32.49-2.02-.01-3.44.01-6.88-.02-10.31-.66.38-1.29.8-2 1.09-1.3.52-2.71.73-4.11.66-.02 1.46-.04 2.92-.02 4.38-.01.69-.14 1.38-.42 2.01-.46 1.08-1.39 1.92-2.52 2.25-1.13.32-2.4.15-3.38-.49-.89-.59-1.48-1.58-1.55-2.64-.07-1.03.38-2.08 1.18-2.73.74-.6 1.71-.84 2.62-.67.07.02.14.03.2.04-.01-1.86-.02-3.72-.01-5.58 1.31-.02 2.61-.01 3.91-.02z"/>
+                                </svg>
+                                @${order.tiktokUsername}
+                            </div>
+                        ` : ''}
+                        ${order.transactionId ? `<div style="margin-top: 8px; font-size: 0.8em; color: #666;">Ref: ${order.transactionId}</div>` : ''}
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+
+            // Add selection button
+            html += `
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn" onclick="proceedWithSelectedOrders()" style="background: #4CAF50;">
+                        ดำเนินการต่อ (Proceed with Selected Orders)
+                    </button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Toggle order selection
+        window.toggleOrderSelection = function(orderId, points) {
+            const checkbox = document.getElementById(`checkbox-${orderId}`);
+            const checkmark = document.getElementById(`checkmark-${orderId}`);
+            const card = checkbox.closest('.order-card');
+
+            if (checkbox.dataset.selected === 'true') {
+                // Deselect
+                checkbox.dataset.selected = 'false';
+                checkbox.style.background = 'white';
+                checkmark.style.display = 'none';
+                card.style.borderColor = '#e0e0e0';
+                card.style.background = 'white';
+            } else {
+                // Select
+                checkbox.dataset.selected = 'true';
+                checkbox.style.background = '#4CAF50';
+                checkmark.style.display = 'block';
+                card.style.borderColor = '#4CAF50';
+                card.style.background = '#f8fff8';
+            }
+
+            // Update selected orders tracking
+            if (!window.selectedOrders) {
+                window.selectedOrders = [];
+            }
+
+            const index = window.selectedOrders.findIndex(order => order.id === orderId);
+            if (index > -1) {
+                window.selectedOrders.splice(index, 1);
+            } else {
+                window.selectedOrders.push({ id: orderId, points: points });
+            }
+
+            console.log('[Delivery] Selected orders:', window.selectedOrders);
+        };
+
+        // Proceed with selected orders
+        window.proceedWithSelectedOrders = function() {
+            if (!window.selectedOrders || window.selectedOrders.length === 0) {
+                alert('กรุณาเลือกคำสั่งซื้ออย่างน้อย 1 รายการ');
+                return;
+            }
+
+            // Show delivery form
+            document.getElementById('delivery-form-container').style.display = 'block';
+
+            // Update selected orders summary
+            const orderIds = window.selectedOrders.map(order => order.id);
+            document.getElementById('selected-order-ids').value = orderIds.join(',');
+
+            const totalPoints = window.selectedOrders.reduce((sum, order) => sum + order.points, 0);
+            document.getElementById('selected-total-points').textContent = totalPoints;
+
+            const ordersList = document.getElementById('selected-orders-list');
+            ordersList.innerHTML = `
+                <div style="font-size: 0.9em;">
+                    ${window.selectedOrders.map(order =>
+                        `<div>• คำสั่งซื้อ #${order.id.slice(-6)} (+${order.points} แต้ม)</div>`
+                    ).join('')}
+                </div>
+            `;
+
+            document.getElementById('selected-orders-summary').style.display = 'block';
+
+            // Scroll to form
+            document.getElementById('delivery-form-container').scrollIntoView({ behavior: 'smooth' });
+        };
+
+        // Handle delivery form submission
+        document.addEventListener('DOMContentLoaded', function() {
+            const deliveryForm = document.getElementById('delivery-address-form');
+            if (deliveryForm) {
+                deliveryForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+
+                    try {
+                        const selectedOrderIds = document.getElementById('selected-order-ids').value;
+                        if (!selectedOrderIds) {
+                            alert('กรุณาเลือกคำสั่งซื้อก่อนกรอกที่อยู่');
+                            return;
+                        }
+
+                        const addressData = {
+                            fullName: document.getElementById('delivery-full-name').value,
+                            phone: document.getElementById('delivery-phone').value,
+                            address: document.getElementById('delivery-address').value,
+                            province: document.getElementById('delivery-province').value,
+                            postalCode: document.getElementById('delivery-postal').value,
+                            notes: document.getElementById('delivery-notes').value
+                        };
+
+                        // Calculate next delivery round
+                        const nextDelivery = calculateNextDeliveryRound();
+
+                        // Initialize Firebase if needed
+                        if (!window.db) {
+                            await initializeFirebase();
+                            window.db = getFirebaseFirestore();
+                        }
+
+                        const db = window.db;
+
+                        // Update all selected orders
+                        const orderIds = selectedOrderIds.split(',');
+                        const batch = writeBatch(db);
+
+                        orderIds.forEach(orderId => {
+                            const orderRef = doc(db, 'orders', orderId);
+                            batch.update(orderRef, {
+                                deliveryAddress: addressData,
+                                status: 'ready_to_ship',
+                                deliveryRound: nextDelivery.dayEng,
+                                deliveryDate: nextDelivery.date,
+                                updatedAt: serverTimestamp()
+                            });
+                        });
+
+                        await batch.commit();
+
+                        // Success message
+                        alert(`✅ บันทึกที่อยู่สำเร็จ!\n\nคำสั่งซื้อ ${orderIds.length} รายการจะจัดส่งในวัน${nextDelivery.dayTh}`);
+
+                        // Reset form
+                        deliveryForm.reset();
+                        document.getElementById('selected-orders-summary').style.display = 'none';
+                        document.getElementById('delivery-form-container').style.display = 'none';
+
+                        // Reload pending orders
+                        window.selectedOrders = [];
+                        await loadPendingOrders();
+
+                    } catch (error) {
+                        console.error('[Delivery] Error submitting delivery info:', error);
+                        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่');
+                    }
+                });
+            }
+        });
+
+        // Calculate next delivery round
+        function calculateNextDeliveryRound() {
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+
+            // Delivery days: Monday (1), Wednesday (3), Saturday (6)
+            const deliveryDays = [1, 3, 6];
+            let daysUntilNext = deliveryDays.find(day => day > dayOfWeek) || deliveryDays[0] + 7 - dayOfWeek;
+
+            const nextDate = new Date(today);
+            nextDate.setDate(today.getDate() + daysUntilNext);
+
+            const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const dayNames = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+
+            return {
+                dayEng: days[nextDate.getDay()],
+                dayTh: dayNames[nextDate.getDay()],
+                date: nextDate.toISOString().split('T')[0] // YYYY-MM-DD format
+            };
+        }
     </script>
 </body>
 </html>

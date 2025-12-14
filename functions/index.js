@@ -287,3 +287,8 @@ exports.testThunderAPI = functions.https.onRequest(async (req, res) => {
     auth: 'Configured'
   });
 });
+
+// Export LINE webhook
+exports.lineWebhook = require('./src/lineWebhook').lineWebhook;
+exports.lineWebhookSimple = require('./src/lineWebhook-simple').lineWebhookSimple;
+exports.lineWebhookMinimal = require('./src/lineWebhook-minimal').lineWebhookMinimal;
