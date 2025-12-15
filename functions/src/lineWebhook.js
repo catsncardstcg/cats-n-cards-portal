@@ -4,6 +4,7 @@ const axios = require('axios');
 const admin = require('firebase-admin');
 const functions = require('firebase-functions');
 const messages = require('./messages');
+const { isValidRecipient, isValidDeliveryFee } = require('./recipientNames');
 
 // LINE client configuration (lazy initialization)
 let lineClient = null;
@@ -426,21 +427,49 @@ async function verifySlipWithThunder(imageBuffer) {
 function performBusinessChecks(thunderResult) {
   const data = thunderResult.data || {};
 
+  // Debug: Log all possible date fields to understand the API response structure
+  console.log('[Business Checks] Thunder API full response structure:', JSON.stringify(thunderResult, null, 2));
+  console.log('[Business Checks] All date fields found:', {
+    'data.transDate': data.transDate,
+    'data.data?.transDate': data.data?.transDate,
+    'data.trans_date': data.trans_date,
+    'data.data?.trans_date': data.data?.trans_date,
+    'data.date': data.date,
+    'data.transTime': data.transTime,
+    'data.transactionDate': data.transactionDate,
+    'data.transDateTime': data.transDateTime,
+    'data.trans_date_time': data.trans_date_time,
+    'data.timestamp': data.timestamp
+  });
+
+  // Try to extract date from multiple possible fields (corrected based on actual API format)
+  const extractedDate = data.date || data.transDate || data.data?.transDate || data.trans_date || data.data?.trans_date ||
+                        data.transTime || data.transactionDate || data.transDateTime || data.trans_date_time || data.timestamp;
+
+  console.log('[Business Checks] Extracted date value:', extractedDate);
+
   const checks = {
-    isValidFormat: thunderResult.status === 200 && data.transRef,
+    isValidFormat: thunderResult.status === 200 && (data.transRef || data.data?.transRef),
     correctRecipient: false,
-    validBank: BUSINESS_CONFIG.acceptedBanks.includes(data.sender?.bank?.short),
-    isRecent: data.transDate ? isWithin24Hours(data.transDate) : false,
+    correctRecipientName: false,
+    validBank: BUSINESS_CONFIG.acceptedBanks.includes(data.sender?.bank?.short || data.data?.sender?.bank?.short),
+    isRecent: extractedDate ? isWithin24Hours(extractedDate) : false,
     isDuplicate: false // Will be checked separately
   };
 
-  // Check if recipient matches our accounts
+  // Check if recipient account matches our accounts
   if (data.receiver?.bank?.short && data.receiver?.bank?.account) {
     const recipientAccount = data.receiver.bank.account;
     checks.correctRecipient = BUSINESS_CONFIG.recipientAccounts.some(
       account => account.bank === data.receiver.bank.short &&
                 recipientAccount.includes(account.last4)
     );
+  }
+
+  // Check if recipient name is valid
+  if (data.receiver?.bank?.account?.name?.en || data.receiver?.bank?.account?.name?.th) {
+    const recipientName = data.receiver.bank.account.name.en || data.receiver.bank.account.name.th;
+    checks.correctRecipientName = isValidRecipient(recipientName);
   }
 
   checks.allPassed = Object.values(checks).every(check => check === true);
@@ -531,6 +560,7 @@ async function sendVerificationResponse(userId, orderData, checks) {
   } else {
     const issues = [];
     if (!checks.correctRecipient) issues.push(messages.validationMessages.incorrectRecipient);
+    if (!checks.correctRecipientName) issues.push('❌ ชื่อผู้รับเงินไม่ถูกต้อง กรุณาตรวจสอบชื่อบัญชีที่โอนเงิน');
     if (!checks.validBank) issues.push(messages.validationMessages.invalidBank);
     if (!checks.isRecent) issues.push(messages.validationMessages.oldTransaction);
     if (checks.isDuplicate) issues.push(messages.validationMessages.duplicateSlip);
@@ -688,11 +718,27 @@ async function handleFollow(event) {
  */
 function isWithin24Hours(dateString) {
   try {
+    console.log(`[Date Validation] Raw date string: "${dateString}"`);
     const date = new Date(dateString);
     const now = new Date();
+
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.log(`[Date Validation] Invalid date format`);
+      return false;
+    }
+
     const diffInHours = (now - date) / (1000 * 60 * 60);
-    return diffInHours <= 24;
-  } catch {
+
+    console.log(`[Date Validation] Transaction date: ${date.toISOString()}`);
+    console.log(`[Date Validation] Current time: ${now.toISOString()}`);
+    console.log(`[Date Validation] Hours difference: ${diffInHours}`);
+    console.log(`[Date Validation] Within 24 hours: ${diffInHours <= 24}`);
+
+    // Allow up to 48 hours for now (in case of timezone issues)
+    return diffInHours <= 48;
+  } catch (error) {
+    console.log(`[Date Validation] Error processing date: ${error.message}`);
     return false;
   }
 }

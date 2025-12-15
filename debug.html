@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Transaction Debugger</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+        .button.danger {
+            background: #f44336;
+        }
+        .button.danger:hover {
+            background: #da190b;
+        }
+        #output {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Firebase Transaction Debugger</h1>
+
+        <div class="warning">
+            <strong>⚠️ Warning:</strong> This tool will read all transaction data from your Firebase database.
+            Make sure you have the proper permissions before proceeding.
+        </div>
+
+        <div>
+            <button class="button" onclick="runDebug()">🚀 Run Transaction Debug</button>
+            <button class="button danger" onclick="clearOutput()">🗑️ Clear Output</button>
+        </div>
+
+        <div id="output">Click "Run Transaction Debug" to analyze existing transaction data...</div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase configuration (same as your production config)
+        const firebaseConfig = {
+            apiKey: "AIzaSyD1LsJ_NlxOFGpeSp6BeeUzFIhEMOsMVsY",
+            authDomain: "cats-n-cards-tcg.firebaseapp.com",
+            databaseURL: "https://cats-n-cards-tcg-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "cats-n-cards-tcg",
+            storageBucket: "cats-n-cards-tcg.firebasestorage.app",
+            messagingSenderId: "62209237814",
+            appId: "1:62209237814:web:08b5039c6b819781ebc997"
+        };
+
+        // Initialize Firebase
+        let db = null;
+
+        function initializeFirebase() {
+            try {
+                if (!db) {
+                    firebase.initializeApp(firebaseConfig);
+                    db = firebase.firestore();
+                    console.log('✅ Firebase initialized');
+                }
+                return true;
+            } catch (error) {
+                console.error('❌ Firebase initialization error:', error);
+                return false;
+            }
+        }
+
+        function log(message) {
+            const output = document.getElementById('output');
+            output.textContent += message + '\n';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').textContent = '';
+        }
+
+        async function runDebug() {
+            clearOutput();
+            log('🔍 Starting Firebase transaction analysis...');
+
+            try {
+                if (!initializeFirebase()) {
+                    log('❌ Failed to initialize Firebase');
+                    return;
+                }
+
+                // Get all users
+                log('\n📊 Getting all users...');
+                const usersSnapshot = await db.collection('users').get();
+                log(`Found ${usersSnapshot.size} users`);
+
+                let totalOrders = 0;
+                let dateIssues = [];
+                let recipientIssues = [];
+
+                for (const userDoc of usersSnapshot.docs) {
+                    const userId = userDoc.id;
+                    const userData = userDoc.data();
+
+                    log(`\n=== USER: ${userId} ===`);
+                    log(`Display Name: ${userData.displayName || 'N/A'}`);
+                    log(`TikTok: ${userData.tiktokUsername || 'N/A'}`);
+
+                    // Get orders for this user
+                    const ordersSnapshot = await db
+                        .collection('users')
+                        .doc(userId)
+                        .collection('orders')
+                        .orderBy('submittedAt', 'desc')
+                        .limit(10) // Get last 10 orders per user
+                        .get();
+
+                    if (!ordersSnapshot.empty) {
+                        log(`📦 Orders: ${ordersSnapshot.size}`);
+                        totalOrders += ordersSnapshot.size;
+
+                        for (const orderDoc of ordersSnapshot.docs) {
+                            const orderData = orderDoc.data();
+                            const orderId = orderDoc.id;
+
+                            log(`\n   📋 Order #${orderId.slice(-8)}`);
+                            log(`      Status: ${orderData.verificationStatus || 'N/A'}`);
+                            log(`      Submitted: ${orderData.submittedAt || 'N/A'}`);
+                            log(`      Amount: ${orderData.amount || 'N/A'}`);
+
+                            // Check validation results
+                            if (orderData.checks) {
+                                log(`      ✅ Valid Format: ${orderData.checks.isValidFormat}`);
+                                log(`      📅 Is Recent: ${orderData.checks.isRecent}`);
+                                log(`      👤 Correct Recipient: ${orderData.checks.correctRecipient}`);
+                                log(`      🏦 Correct Recipient Name: ${orderData.checks.correctRecipientName || 'N/A'}`);
+
+                                // Identify issues
+                                if (orderData.checks.isValidFormat && !orderData.checks.isRecent) {
+                                    dateIssues.push({
+                                        orderId: orderId,
+                                        userId: userId,
+                                        orderData: orderData
+                                    });
+                                }
+
+                                if (orderData.checks.isValidFormat && !orderData.checks.correctRecipientName) {
+                                    recipientIssues.push({
+                                        orderId: orderId,
+                                        userId: userId,
+                                        orderData: orderData
+                                    });
+                                }
+                            }
+
+                            // Analyze Thunder API data structure
+                            if (orderData.thunderResult) {
+                                log(`      ⚡ Thunder API Status: ${orderData.thunderResult.status}`);
+
+                                // Check different possible date paths
+                                const datePaths = [
+                                    'thunderResult.data.transDate',
+                                    'thunderResult.data.data.transDate',
+                                    'thunderResult.data.trans_date',
+                                    'thunderResult.data.data.trans_date'
+                                ];
+
+                                log(`      🔍 Date Analysis:`);
+                                datePaths.forEach(path => {
+                                    const value = getNestedValue(orderData, path);
+                                    if (value) {
+                                        log(`         ✅ ${path}: ${value}`);
+
+                                        // Try to parse and calculate age
+                                        try {
+                                            const date = new Date(value);
+                                            if (!isNaN(date.getTime())) {
+                                                const now = new Date();
+                                                const hoursOld = (now - date) / (1000 * 60 * 60);
+                                                log(`            Age: ${hoursOld.toFixed(2)} hours`);
+                                            }
+                                        } catch (e) {
+                                            log(`            ❌ Could not parse date`);
+                                        }
+                                    } else {
+                                        log(`         ❌ ${path}: NOT FOUND`);
+                                    }
+                                });
+
+                                // Check recipient name paths
+                                const recipientPaths = [
+                                    'thunderResult.data.receiver.bank.account.name.en',
+                                    'thunderResult.data.data.receiver.bank.account.name.en',
+                                    'thunderResult.data.receiver.bank.account.name.th',
+                                    'thunderResult.data.data.receiver.bank.account.name.th'
+                                ];
+
+                                log(`      👤 Recipient Names:`);
+                                recipientPaths.forEach(path => {
+                                    const value = getNestedValue(orderData, path);
+                                    if (value) {
+                                        log(`         🏷️ ${path}: ${value}`);
+
+                                        // Check against our recipient names
+                                        const validRecipients = [
+                                            "นาย นทีธาร ป",
+                                            "นาย ณภัทร ป ",
+                                            "นทีธาร",
+                                            "ณภัทร",
+                                            "นทีธาร ป",
+                                            "ณภัทร ป"
+                                        ];
+
+                                        const isValid = validRecipients.some(name =>
+                                            value.toLowerCase().includes(name.toLowerCase())
+                                        );
+                                        log(`            ✅ Valid recipient: ${isValid}`);
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // Summary
+                log(`\n📈 SUMMARY:`);
+                log(`   Total Users: ${usersSnapshot.size}`);
+                log(`   Total Orders Analyzed: ${totalOrders}`);
+                log(`   Orders with Date Issues: ${dateIssues.length}`);
+                log(`   Orders with Recipient Issues: ${recipientIssues.length}`);
+
+                // Show detailed issues
+                if (dateIssues.length > 0) {
+                    log(`\n❌ DATE VALIDATION ISSUES (${dateIssues.length}):`);
+                    dateIssues.forEach((issue, index) => {
+                        log(`\n   ${index + 1}. Order: ${issue.orderId.slice(-8)}`);
+                        log(`      User: ${issue.userId}`);
+                        log(`      Thunder Result:`, JSON.stringify(issue.orderData.thunderResult, null, 2));
+                    });
+                }
+
+                if (recipientIssues.length > 0) {
+                    log(`\n👤 RECIPIENT VALIDATION ISSUES (${recipientIssues.length}):`);
+                    recipientIssues.forEach((issue, index) => {
+                        log(`\n   ${index + 1}. Order: ${issue.orderId.slice(-8)}`);
+                        log(`      User: ${issue.userId}`);
+                        log(`      Actual recipient found in Thunder API data`);
+                    });
+                }
+
+                log(`\n✅ Analysis complete!`);
+
+            } catch (error) {
+                log(`❌ Error during analysis: ${error.message}`);
+                console.error('Full error:', error);
+            }
+        }
+
+        function getNestedValue(obj, path) {
+            try {
+                return path.split('.').reduce((current, key) => current && current[key], obj);
+            } catch (e) {
+                return null;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -340,9 +340,6 @@
             <button class="tab-button" onclick="switchTab('register')">
                 📝 Register<br>ลงทะเบียน
             </button>
-            <button class="tab-button" onclick="switchTab('payment')">
-                💳 Payment<br>ชำระเงิน
-            </button>
             <button class="tab-button active" onclick="switchTab('request-delivery')">
                 📦 Request Delivery<br>ขอจัดส่งสินค้า
             </button>
@@ -391,63 +388,11 @@
             </form>
         </div>
 
-        <!-- Payment Tab -->
-        <div id="payment" class="tab-content">
-            <h2 style="margin-bottom: 30px; text-align: center; color: #333;">
-                💳 ชำระเงินเติมคะแนน
-            </h2>
-
-            <div class="info-box">
-                <p>💡 ส่งสลิปการโอนเงินเพื่อเติมคะแนน</p>
-                <p>💰 อัตรา: 10 บาท = 1 คะแนน</p>
-            </div>
-
-            <div class="payment-methods">
-                <h3>📱 บัญชีธนาคาร</h3>
-                <div class="payment-method">
-                    <p><strong>ธนาคาร:</strong> กสิกรไทย (KBANK)</p>
-                    <p><strong>เลขที่บัญชี:</strong> 123-456-7890</p>
-                    <p><strong>ชื่อบัญชี:</strong> นายสมชาย ใจดี</p>
-                    <div class="qr-code">
-                        <p>📷 สแกน QR Code สำหรับชำระเงิน</p>
-                        <!-- QR Code placeholder -->
-                        <div style="width: 200px; height: 200px; background: #f0f0f0; margin: 10px auto; display: flex; align-items: center; justify-content: center; border: 2px dashed #ccc;">
-                            <span style="color: #666;">QR Code</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="payment-alert" class="alert"></div>
-
-            <form id="payment-form">
-                <div class="form-group">
-                    <label for="payment-amount">จำนวนเงิน (บาท) *</label>
-                    <input type="number" id="payment-amount" placeholder="100" min="50" step="10" required>
-                    <small style="color: #666; display: block; margin-top: 5px;">ขั้นต่ำ 50 บาท</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="payment-slip">อัปโหลดสลิปการโอนเงิน *</label>
-                    <input type="file" id="payment-slip" accept="image/*" required>
-                    <small style="color: #666; display: block; margin-top: 5px;">รองรับไฟล์รูปภาพ (JPG, PNG)</small>
-                </div>
-
-                <button type="submit" class="btn" style="width: 100%;">
-                    ✅ ส่งสลิปยืนยันการโอนเงิน
-                </button>
-            </form>
-
-            <div id="payment-processing" style="display: none; text-align: center; padding: 20px;">
-                <div class="spinner"></div>
-                <p>⏳ กำลังตรวจสอบสลิป...</p>
-            </div>
-        </div>
-
+        
         <!-- Request Delivery Tab -->
         <div id="request-delivery" class="tab-content active">
             <h2 style="margin-bottom: 30px; text-align: center; color: #333;">
-                📦 กรอกที่อยู่จัดส่งสินค้า
+                📦 ขอจัดส่งสินค้า + ชำระค่าส่ง
             </h2>
 
             <div class="delivery-info" id="delivery-round-info">
@@ -456,6 +401,23 @@
             </div>
 
             <div id="delivery-alert" class="alert"></div>
+
+            <!-- Delivery Fee Payment Section -->
+            <div class="payment-methods">
+                <h3>💳 ค่าจัดส่ง: 50 บาท</h3>
+                <div class="payment-method">
+                    <p><strong>ธนาคาร:</strong> กสิกรไทย (KBANK)</p>
+                    <p><strong>เลขที่บัญชี:</strong> 123-456-7890</p>
+                    <p><strong>ชื่อบัญชี:</strong> นายสมชาย ใจดี</p>
+                    <div class="qr-code">
+                        <p>📷 สแกน QR Code สำหรับชำระค่าจัดส่ง</p>
+                        <!-- QR Code placeholder -->
+                        <div style="width: 200px; height: 200px; background: #f0f0f0; margin: 10px auto; display: flex; align-items: center; justify-content: center; border: 2px dashed #ccc;">
+                            <span style="color: #666;">QR Code 50 บาท</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <form id="delivery-form">
                 <div class="form-group">
@@ -478,8 +440,14 @@
                     <textarea id="notes" rows="2" placeholder="ข้อมูลเพิ่มเติม เช่น จัดส่งตอนไหนดี หรือจุดสังเกตุ"></textarea>
                 </div>
 
+                <div class="form-group">
+                    <label for="delivery-slip">📷 อัปโหลดสลิปโอนค่าจัดส่ง (50 บาท) *</label>
+                    <input type="file" id="delivery-slip" accept="image/*" required>
+                    <small style="color: #666; display: block; margin-top: 5px;">รองรับไฟล์รูปภาพ (JPG, PNG) - กรุณาชำระเงิน 50 บาท แล้วอัปโหลดสลิป</small>
+                </div>
+
                 <button type="submit" class="btn" id="submit-delivery-btn">
-                    ✅ ส่งข้อมูลจัดส่ง
+                    ✅ ส่งข้อมูลจัดส่ง + ยืนยันการชำระเงิน
                 </button>
             </form>
         </div>
@@ -539,6 +507,9 @@
 
     <!-- User Mapping Module -->
     <script defer src="user-mapping.js"></script>
+
+    <!-- Recipient Names Configuration -->
+    <script defer src="recipient-names.js"></script>
 
     <!-- Firebase Receipt Upload Module -->
     <script defer src="firebase-receipt-upload.js"></script>
@@ -754,9 +725,54 @@
 
             const button = document.getElementById('submit-delivery-btn');
             button.disabled = true;
-            button.textContent = '⏳ กำลังส่งข้อมูล...';
+            button.textContent = '⏳ กำลังตรวจสอบสลิป...';
 
             try {
+                const lineId = getLINEUserId();
+                if (!lineId) {
+                    throw new Error('ไม่พบข้อมูล LINE user');
+                }
+
+                // Check if payment slip is uploaded
+                const fileInput = document.getElementById('delivery-slip');
+                const file = fileInput.files[0];
+
+                if (!file) {
+                    showAlert('❌ กรุณาอัปโหลดสลิปการโอนค่าจัดส่ง 50 บาท', 'error');
+                    button.disabled = false;
+                    button.textContent = '✅ ส่งข้อมูลจัดส่ง + ยืนยันการชำระเงิน';
+                    return;
+                }
+
+                // Update button text for image processing
+                button.textContent = '⏳ กำลังประมวลผลรูปภาพ...';
+
+                // Compress and upload payment slip
+                const compressionOptions = {
+                    maxSizeMB: 0.5,
+                    maxWidthOrHeight: 1920,
+                    useWebWorker: true
+                };
+                const compressedFile = await imageCompression(file, compressionOptions);
+
+                button.textContent = '⏳ กำลังอัปโหลดสลิป...';
+
+                const uploadResult = await uploadReceiptToFirebase(
+                    compressedFile,
+                    'delivery',
+                    'delivery_fee',
+                    {
+                        lineUserId: lineId,
+                        amount: 50, // Fixed delivery fee
+                        type: 'delivery_fee',
+                        timestamp: new Date().toISOString()
+                    }
+                );
+                const slipUrl = uploadResult.url;
+
+                // Update button text for final submission
+                button.textContent = '⏳ กำลังส่งคำขอจัดส่ง...';
+
                 const deliveryRound = calculateNextDeliveryRound();
 
                 const data = {
@@ -766,8 +782,10 @@
                     address: document.getElementById('address').value,
                     notes: document.getElementById('notes').value,
                     deliveryRound: deliveryRound.dayEng,
+                    deliveryFee: 50,
+                    slipUrl: slipUrl,
                     submittedAt: new Date().toISOString(),
-                    lineUserId: lineUserId || null,
+                    lineUserId: lineId,
                     lineDisplayName: window.getLINEDisplayName ? window.getLINEDisplayName() : null,
                     tiktokUsername: window.getTikTokUsername ? window.getTikTokUsername() : null
                 };
@@ -783,7 +801,7 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    showAlert(`✅ ส่งคำขอจัดส่งสำเร็จ! จะจัดส่งในวัน${deliveryRound.day} ${deliveryRound.isToday ? '(วันนี้)' : deliveryRound.date}`, 'success');
+                    showAlert(`✅ ชำระค่าจัดส่งสำเร็จ! จะจัดส่งในวัน${deliveryRound.day} ${deliveryRound.isToday ? '(วันนี้)' : deliveryRound.date}\nเลขพัสดุจะแจ้งให้ทราบเมื่อจัดส่ง`, 'success');
 
                     // Reset form
                     document.getElementById('delivery-form').reset();
@@ -1000,88 +1018,6 @@
                     } catch (error) {
                         console.error('[Delivery] Registration error:', error);
                         showAlert('register-alert', '❌ เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
-                    }
-                });
-            }
-
-            // Payment form handler
-            const paymentForm = document.getElementById('payment-form');
-            if (paymentForm) {
-                paymentForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-
-                    try {
-                        const fileInput = document.getElementById('payment-slip');
-                        const file = fileInput.files[0];
-
-                        if (!file) {
-                            showAlert('payment-alert', '❌ กรุณาเลือกรูปภาพสลิป', 'error');
-                            return;
-                        }
-
-                        // Show processing state
-                        document.getElementById('payment-form').style.display = 'none';
-                        document.getElementById('payment-processing').style.display = 'block';
-                        showAlert('payment-alert', '⏳ กำลังตรวจสอบสลิป...', 'info');
-
-                        const lineId = getLINEUserId();
-                        if (!lineId) {
-                            throw new Error('ไม่พบข้อมูล LINE user');
-                        }
-
-                        // Compress and upload image
-                        const compressionOptions = {
-                            maxSizeMB: 0.5,
-                            maxWidthOrHeight: 1920,
-                            useWebWorker: true
-                        };
-                        const compressedFile = await imageCompression(file, compressionOptions);
-                        const uploadResult = await uploadReceiptToFirebase(
-                            compressedFile,
-                            'payment',
-                            'payment',
-                            {
-                                lineUserId: lineId,
-                                amount: parseFloat(document.getElementById('payment-amount').value),
-                                timestamp: new Date().toISOString()
-                            }
-                        );
-                        const imageUrl = uploadResult.url;
-
-                        // Send payment data
-                        const data = {
-                            action: 'processPayment',
-                            lineUserId: lineId,
-                            amount: parseFloat(document.getElementById('payment-amount').value),
-                            slipUrl: imageUrl,
-                            timestamp: new Date().toISOString()
-                        };
-
-                        const response = await fetch(SCRIPT_URL, {
-                            method: 'POST',
-                            body: JSON.stringify(data)
-                        });
-
-                        const result = await response.json();
-
-                        if (result.success) {
-                            showAlert('payment-alert', '✅ การโอนเงินยืนยันสำเร็จ!\nคะแนนที่ได้: +' + result.pointsEarned + ' แต้ม', 'success');
-                            paymentForm.reset();
-
-                            // Switch to delivery tab after successful payment
-                            setTimeout(() => {
-                                switchTab('request-delivery');
-                            }, 3000);
-                        } else {
-                            showAlert('payment-alert', '❌ ' + (result.error || 'การตรวจสอบสลิปไม่สำเร็จ'), 'error');
-                        }
-                    } catch (error) {
-                        console.error('[Delivery] Payment error:', error);
-                        showAlert('payment-alert', '❌ เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
-                    } finally {
-                        // Hide processing state
-                        document.getElementById('payment-form').style.display = 'block';
-                        document.getElementById('payment-processing').style.display = 'none';
                     }
                 });
             }
